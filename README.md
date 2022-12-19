@@ -19,3 +19,7 @@ Copy the `custom_components/polar` folder into the config folder.
 ## Configuration
 
 To add the Polar integration to your installation, go to Configuration >> Integrations in the UI, click the button with + sign and from the list of integrations select Polar.
+
+## Credits
+
+Thanks to https://github.com/burnnat/ha-polar
