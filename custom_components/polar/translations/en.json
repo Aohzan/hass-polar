@@ -1,0 +1,34 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "client_id": "Client ID",
+                    "client_secret": "Client secret",
+                    "scan_interval": "Scan Interval (minutes)"
+                },
+                "description": "Get your credentials from https://admin.polaraccesslink.com",
+                "title": "Polar integration"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "scan_interval": "Scan Interval (minutes)"
+                },
+                "description": "Configure Polar integration",
+                "title": "Polar options"
+            }
+        }
+    }
+}
