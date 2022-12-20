@@ -2,12 +2,8 @@
 
 DOMAIN = "polar"
 
-CONF_CLIENT_ID = "client_id"
-CONF_CLIENT_SECRET = "client_secret"
 CONF_USER_ID = "user_id"
-CONF_ACCESS_TOKEN = "access_token"
 DEFAULT_SCAN_INTERVAL = 30
-
 
 ATTR_EXERCISE_DATA = "exercisedata"
 ATTR_SLEEP_DATA = "sleepdata"

@@ -2,10 +2,15 @@
 from datetime import datetime
 import json
 import logging
+from os import path
 
 import isodate
 
-from . import endpoints
+from .endpoints.daily_activity import DailyActivity
+from .endpoints.physical_info import PhysicalInfo
+from .endpoints.pull_notifications import PullNotifications
+from .endpoints.training_data import TrainingData
+from .endpoints.users import Users
 from .oauth2 import OAuth2Client
 
 AUTHORIZATION_URL = "https://flow.polar.com/oauth2/authorization"
@@ -37,11 +42,11 @@ class AccessLink:
             client_secret=client_secret,
         )
 
-        self.users = endpoints.Users(oauth=self.oauth)
-        self.pull_notifications = endpoints.PullNotifications(oauth=self.oauth)
-        self.training_data = endpoints.TrainingData(oauth=self.oauth)
-        self.physical_info = endpoints.PhysicalInfo(oauth=self.oauth)
-        self.daily_activity = endpoints.DailyActivity(oauth=self.oauth)
+        self.users = Users(oauth=self.oauth)
+        self.pull_notifications = PullNotifications(oauth=self.oauth)
+        self.training_data = TrainingData(oauth=self.oauth)
+        self.physical_info = PhysicalInfo(oauth=self.oauth)
+        self.daily_activity = DailyActivity(oauth=self.oauth)
 
     def get_authorization_url(self, state=None):
         """Get the authorization url for the client."""
@@ -99,10 +104,17 @@ class AccessLink:
         )
 
         if not transaction:
-            _LOGGER.debug("No new daily activity available, get from backup file")
             try:
-                state_file = open(state_file_path, encoding="utf-8")
-                activities = json.loads(state_file.read())
+                if path.isfile(state_file_path):
+                    _LOGGER.debug(
+                        "No new daily activity available, get from backup file"
+                    )
+                    with open(state_file_path, encoding="utf-8") as state_file:
+                        activities = json.loads(state_file.read())
+                else:
+                    _LOGGER.debug(
+                        "No daily activity available, will try for the next sync"
+                    )
             except OSError as exc:
                 _LOGGER.error(
                     "Unable to get daily activities from backup file %s: %s",

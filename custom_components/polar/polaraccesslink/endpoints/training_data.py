@@ -1,21 +1,13 @@
+"""Training data."""
 from .resource import Resource
 from .training_data_transaction import TrainingDataTransaction
 
 
 class TrainingData(Resource):
-    """This resource allows partners to access their users' training data.
-
-    https://www.polar.com/accesslink-api/?http#training-data
-    """
+    """This resource allows partners to access their users' training data."""
 
     def create_transaction(self, user_id, access_token):
-        """Initiate exercise transaction
-
-        Check for new training data and create a new transaction if data is available.
-
-        :param user_id: id of the user
-        :param access_token: access token of the user
-        """
+        """Initiate exercise transaction."""
         response = self._post(
             endpoint=f"/users/{user_id}/exercise-transactions",
             access_token=access_token,

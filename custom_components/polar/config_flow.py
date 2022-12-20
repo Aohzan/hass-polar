@@ -10,7 +10,13 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.http import HomeAssistantView
-from homeassistant.const import CONF_NAME, CONF_SCAN_INTERVAL
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_CLIENT_ID,
+    CONF_CLIENT_SECRET,
+    CONF_NAME,
+    CONF_SCAN_INTERVAL,
+)
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.config_entry_oauth2_flow import _decode_jwt, _encode_jwt
@@ -18,14 +24,11 @@ from homeassistant.helpers.config_entry_oauth2_flow import _decode_jwt, _encode_
 from .const import (
     AUTH_CALLBACK_NAME,
     AUTH_CALLBACK_PATH,
-    CONF_ACCESS_TOKEN,
-    CONF_CLIENT_ID,
-    CONF_CLIENT_SECRET,
     CONF_USER_ID,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from .lib.accesslink import AccessLink
+from .polaraccesslink.accesslink import AccessLink
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,19 +1,16 @@
+"""OAuth access for Polar Access Link."""
 import logging
+from urllib.parse import urlencode
 
 import requests
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
 _LOGGER = logging.getLogger(__name__)
 
 
 class OAuth2Client:
-    """Wrapper class for OAuth2 requests"""
+    """Wrapper class for OAuth2 requests."""
 
     def __init__(
         self,
@@ -24,6 +21,7 @@ class OAuth2Client:
         client_id,
         client_secret,
     ):
+        """Init the client object."""
         self.url = url
         self.authorization_url = authorization_url
         self.access_token_url = access_token_url
@@ -32,7 +30,7 @@ class OAuth2Client:
         self.client_secret = client_secret
 
     def get_auth_headers(self, access_token):
-        """Get authorization headers for user level api resources"""
+        """Get authorization headers for user level api resources."""
 
         return {
             "Authorization": f"Bearer {access_token}",
@@ -41,7 +39,7 @@ class OAuth2Client:
         }
 
     def get_authorization_url(self, response_type="code", state=None):
-        """Build authorization url for the client"""
+        """Build authorization url for the client."""
 
         params = {
             "client_id": self.client_id,
@@ -59,7 +57,7 @@ class OAuth2Client:
         )
 
     def get_access_token(self, authorization_code):
-        """Exchange authorization code for an access token"""
+        """Exchange authorization code for an access token."""
 
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -78,11 +76,7 @@ class OAuth2Client:
         )
 
     def __build_endpoint_kwargs(self, **kwargs):
-        """Create endpoint url for requests
-
-        If `endpoint` argument is given, it is appended to the api url
-        and used as the request url. Otherwise `url` argument is used.
-        """
+        """Create endpoint url for requests."""
 
         if "endpoint" in kwargs:
             if kwargs["endpoint"] is not None:
@@ -92,11 +86,7 @@ class OAuth2Client:
         return kwargs
 
     def __build_auth_kwargs(self, **kwargs):
-        """Setup authentication for requests
-
-        If `access_token` is given, it is used in Authentication header.
-        Otherwise basic auth is used with the client credentials.
-        """
+        """Build the authentication to make requests."""
 
         if "access_token" in kwargs:
             headers = self.get_auth_headers(kwargs["access_token"])
@@ -112,11 +102,13 @@ class OAuth2Client:
         return kwargs
 
     def __build_request_kwargs(self, **kwargs):
+        """Build requests."""
         kwargs = self.__build_endpoint_kwargs(**kwargs)
         kwargs = self.__build_auth_kwargs(**kwargs)
         return kwargs
 
     def __parse_response(self, response):
+        """Parse response."""
         if response.status_code >= 400:
             message = "{code} {reason}: {body}".format(
                 code=response.status_code, reason=response.reason, body=response.text
@@ -132,21 +124,26 @@ class OAuth2Client:
             return response.text
 
     def __request(self, method, **kwargs):
+        """Make a request."""
         kwargs = self.__build_request_kwargs(**kwargs)
 
         _LOGGER.debug("%s request to URL: %s", method.upper(), kwargs["url"])
 
-        response = requests.request(method, **kwargs)
+        response = requests.request(method=method, timeout=60, **kwargs)
         return self.__parse_response(response)
 
     def get(self, endpoint, **kwargs):
+        """Make a GET request."""
         return self.__request("get", endpoint=endpoint, **kwargs)
 
     def post(self, endpoint, **kwargs):
+        """Make a POST request."""
         return self.__request("post", endpoint=endpoint, **kwargs)
 
     def put(self, endpoint, **kwargs):
+        """Make a PUT request."""
         return self.__request("put", endpoint=endpoint, **kwargs)
 
     def delete(self, endpoint, **kwargs):
+        """Make a DELETE request."""
         return self.__request("delete", endpoint=endpoint, **kwargs)
