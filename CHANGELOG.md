@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Allow to customize URL for callback
+- Fix trailing slash
+
 ## 0.1.2
 
 - Improve code quality

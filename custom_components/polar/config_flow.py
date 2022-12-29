@@ -14,6 +14,7 @@ from homeassistant.const import (
     CONF_ACCESS_TOKEN,
     CONF_CLIENT_ID,
     CONF_CLIENT_SECRET,
+    CONF_EXTERNAL_URL,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
 )
@@ -32,13 +33,22 @@ from .polaraccesslink.accesslink import AccessLink
 
 _LOGGER = logging.getLogger(__name__)
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_CLIENT_ID): str,
-        vol.Required(CONF_CLIENT_SECRET): str,
-        vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
-    }
-)
+
+def _get_user_data_schema(hass_external_url: str | None) -> vol.Schema:
+    """Return schema with hass external URL as default external URL."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_CLIENT_ID): str,
+            vol.Required(CONF_CLIENT_SECRET): str,
+            vol.Required(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
+            vol.Required(CONF_EXTERNAL_URL, default=hass_external_url): str,
+        }
+    )
+
+
+def _get_callback_url(external_url: str) -> str:
+    """Get callback url."""
+    return f"{external_url.strip('/')}{AUTH_CALLBACK_PATH}"
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -53,10 +63,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.external_data = {}
         self.accesslink: AccessLink = None
 
-    def get_callback_url(self) -> str:
-        """Get callback url."""
-        return f"{self.hass.config.external_url}{AUTH_CALLBACK_PATH}"
-
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -66,15 +72,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             return self.async_show_form(
                 step_id="user",
-                description_placeholders={"callback_url": self.get_callback_url()},
-                data_schema=STEP_USER_DATA_SCHEMA,
+                data_schema=_get_user_data_schema(self.hass.config.external_url),
             )
 
         self.data = user_input
         self.accesslink = AccessLink(
             client_id=self.data[CONF_CLIENT_ID],
             client_secret=self.data[CONF_CLIENT_SECRET],
-            redirect_url=self.get_callback_url(),
+            redirect_url=_get_callback_url(user_input[CONF_EXTERNAL_URL]),
         )
 
         return await self.async_step_oauth()
@@ -89,7 +94,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         self.hass,
                         {
                             "flow_id": self.flow_id,
-                            "redirect_uri": self.get_callback_url(),
+                            "redirect_uri": _get_callback_url(
+                                self.data[CONF_EXTERNAL_URL]
+                            ),
                         },
                     )
                 ),
@@ -118,7 +125,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if err.response.status_code != 409:
                 return self.async_show_form(
                     step_id="user",
-                    data_schema=STEP_USER_DATA_SCHEMA,
+                    data_schema=_get_user_data_schema(self.hass.config.external_url),
                     errors={"http_error": err.response.status_code},
                 )
 

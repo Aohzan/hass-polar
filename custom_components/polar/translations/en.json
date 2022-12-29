@@ -13,7 +13,8 @@
                 "data": {
                     "client_id": "Client ID",
                     "client_secret": "Client secret",
-                    "scan_interval": "Scan Interval (minutes)"
+                    "scan_interval": "Scan Interval (minutes)",
+                    "external_url": "External URL for Home-Assistant (used in callback url)"
                 },
                 "description": "Get your credentials from https://admin.polaraccesslink.com",
                 "title": "Polar integration"
