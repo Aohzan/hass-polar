@@ -15,5 +15,5 @@
   "requirements": [
     "isodate==0.6.1"
   ],
-  "version": "0.2.0"
+  "version": "1.0.0"
 }

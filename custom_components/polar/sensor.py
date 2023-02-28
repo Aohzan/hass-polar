@@ -78,8 +78,8 @@ SENSORS = (
     PolarEntityDescription(
         key_category=ATTR_LAST_EXERCISE,
         key="start_time",
-        name="Last exercice",
-        unique_id="last_exercice",
+        name="Last exercise",
+        unique_id="last_exercise",
         attributes_keys=[
             "distance",
             "duration",

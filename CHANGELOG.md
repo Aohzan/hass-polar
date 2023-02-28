@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.0
+
+- stable release
+- fix last exercise entity name
+
 ## 0.2.0
 
 - Allow to customize URL for callback
