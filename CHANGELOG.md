@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- fix url callback building
+- fix device and state class for entities
+- add default icons to entities
+- update translations and README
+
 ## 1.0.0
 
 - stable release

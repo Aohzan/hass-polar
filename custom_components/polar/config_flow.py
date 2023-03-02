@@ -48,7 +48,9 @@ def _get_user_data_schema(hass_external_url: str | None) -> vol.Schema:
 
 def _get_callback_url(external_url: str) -> str:
     """Get callback url."""
-    return f"{external_url.strip('/')}{AUTH_CALLBACK_PATH}"
+    if not external_url.endswith(AUTH_CALLBACK_PATH):
+        return f"{external_url.strip('/')}{AUTH_CALLBACK_PATH}"
+    return external_url
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -57,11 +59,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize class variables."""
-        self.data = {}
-        self.external_data = {}
-        self.accesslink: AccessLink = None
+        self.data: dict[str, Any] = {}
+        self.external_data: dict[str, Any] = {}
+        self.accesslink: AccessLink
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -72,7 +74,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             return self.async_show_form(
                 step_id="user",
-                data_schema=_get_user_data_schema(self.hass.config.external_url),
+                data_schema=_get_user_data_schema(
+                    self.hass.config.external_url or self.hass.config.internal_url
+                ),
             )
 
         self.data = user_input

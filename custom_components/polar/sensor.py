@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
@@ -49,6 +50,8 @@ SENSORS = (
         name="Weight",
         unique_id="weight",
         native_unit_of_measurement="kg",
+        device_class=SensorDeviceClass.WEIGHT,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     # daily
     PolarEntityDescription(
@@ -60,12 +63,14 @@ SENSORS = (
         attributes_keys=[
             "active-calories",
         ],
+        icon="mdi:walk",
     ),
     PolarEntityDescription(
         key_category=ATTR_LAST_DAILY,
         key="duration",
         name="Daily activity Duration",
         unique_id="daily_activity_duration",
+        icon="mdi:clock-time-three",
     ),
     PolarEntityDescription(
         key_category=ATTR_LAST_DAILY,
@@ -73,6 +78,7 @@ SENSORS = (
         native_unit_of_measurement="steps",
         name="Daily activity Steps",
         unique_id="daily_activity_steps",
+        icon="mdi:shoe-print",
     ),
     # exercise
     PolarEntityDescription(
@@ -90,6 +96,7 @@ SENSORS = (
             "running_index",
             "device",
         ],
+        icon="mdi:run",
     ),
     # sleep
     PolarEntityDescription(
@@ -118,6 +125,7 @@ SENSORS = (
             "group_solidity_score",
             "group_regeneration_score",
         ],
+        icon="mdi:sleep",
     ),
     # recharge
     PolarEntityDescription(
@@ -135,6 +143,7 @@ SENSORS = (
             "ans_charge",
             "ans_charge_status",
         ],
+        icon="mdi:bed-clock",
     ),
 )
 
@@ -153,7 +162,6 @@ class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):
     entity_description: PolarEntityDescription
     _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
-    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(
         self,

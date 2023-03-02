@@ -1,0 +1,35 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Déjà configuré"
+        },
+        "error": {
+            "cannot_connect": "Impossible de se connecter",
+            "invalid_auth": "Problème d'authentification",
+            "unknown": "Erreur inconnue"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "client_id": "Client ID",
+                    "client_secret": "Client secret",
+                    "external_url": "URL d'accès à Home-Assistant (utilisé pour l'URL de callback)",
+                    "scan_interval": "Interval entre deux mises à jour (minutes)"
+                },
+                "description": "Obtenez vos identifiants depuis https://admin.polaraccesslink.com",
+                "title": "Intégration Polar"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "scan_interval": "Interval entre deux mises à jour (minutes)"
+                },
+                "description": "Configuration de l'intégration Polar",
+                "title": "Options Polar"
+            }
+        }
+    }
+}
