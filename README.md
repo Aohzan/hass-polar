@@ -3,8 +3,10 @@
 This a _custom component_ for [Home Assistant](https://www.home-assistant.io/).
 The `polar` integration allows you to get information from [Polar](https://flow.polar.com).
 
-You need to create a Client in [Polar Access Link](https://admin.polaraccesslink.com).
-Set `https://your_external_access_to_ha/api/polar_auth` as redirect URL.
+You need to create a Client in [Polar Access Link](https://admin.polaraccesslink.com) and set in `Authorization redirect URLs`:
+
+* `https://your_external_access_to_ha`
+* `https://your_external_access_to_ha/api/polar_auth` (selected)
 
 ## Installation
 
