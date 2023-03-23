@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+
+- add `score` unit of measurement for sleep score
+
 ## 1.1.0
 
 - fix url callback building
