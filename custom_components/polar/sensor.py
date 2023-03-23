@@ -104,6 +104,7 @@ SENSORS = (
         key="sleep_score",
         name="Last sleep score",
         unique_id="last_sleep",
+        native_unit_of_measurement="score",
         attributes_keys=[
             "date",
             "sleep_start_time",
