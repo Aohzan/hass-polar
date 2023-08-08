@@ -177,8 +177,8 @@ class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):
             configuration_url="https://flow.polar.com/",
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, coordinator.entry_id)},
-            default_manufacturer="Polar",
-            default_name=coordinator.user_name,
+            manufacturer="Polar",
+            name=coordinator.user_name,
         )
         self._attr_unique_id = (
             f"{coordinator.entry_id}_{description.unique_id or description.key}"
