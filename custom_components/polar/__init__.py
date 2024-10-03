@@ -113,7 +113,7 @@ class PolarCoordinator(DataUpdateCoordinator):
             self.accesslink.get_daily_activities,
             self._entry.data[CONF_USER_ID],
             self._entry.data[CONF_ACCESS_TOKEN],
-            self.hass.config.path(f"polar_dailydata_{self._entry.entry_id}.json"),
+            self.hass.config.path(f".storage/polar_dailydata_{self._entry.entry_id}.json"),
         )
         return {
             ATTR_USER_DATA: userdata,
