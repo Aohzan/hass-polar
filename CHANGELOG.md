@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0
+
+- fix local storage path
+
 ## 1.2.1
 
 - fix deviceinfo
