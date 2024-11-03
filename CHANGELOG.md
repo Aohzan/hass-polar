@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2
+
+- fix revert of score unit
+
 ## 1.3.1
 
 - fix entry unique id (needs two restarts)
