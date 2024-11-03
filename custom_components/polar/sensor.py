@@ -1,4 +1,5 @@
 """Support for the polar sensors."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -14,8 +15,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -33,16 +33,16 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class PolarEntityDescription(SensorEntityDescription):
     """Provide a description of a Polar sensor."""
 
-    key_category: str | None = None
-    unique_id: str | None = None
-    attributes_keys: list[str] | None = None
+    key_category: str
+    unique_id: str
+    attributes_keys: list[str]
 
 
-SENSORS = (
+SENSOR_DESCRIPTIONS = (
     # personal
     PolarEntityDescription(
         key_category=ATTR_USER_DATA,
@@ -52,6 +52,7 @@ SENSORS = (
         native_unit_of_measurement="kg",
         device_class=SensorDeviceClass.WEIGHT,
         state_class=SensorStateClass.MEASUREMENT,
+        attributes_keys=[],
     ),
     # daily
     PolarEntityDescription(
@@ -60,10 +61,10 @@ SENSORS = (
         native_unit_of_measurement="kcal",
         name="Daily activity Calories",
         unique_id="daily_activity_calories",
+        icon="mdi:walk",
         attributes_keys=[
             "active-calories",
         ],
-        icon="mdi:walk",
     ),
     PolarEntityDescription(
         key_category=ATTR_LAST_DAILY,
@@ -71,6 +72,7 @@ SENSORS = (
         name="Daily activity Duration",
         unique_id="daily_activity_duration",
         icon="mdi:clock-time-three",
+        attributes_keys=[],
     ),
     PolarEntityDescription(
         key_category=ATTR_LAST_DAILY,
@@ -79,6 +81,7 @@ SENSORS = (
         name="Daily activity Steps",
         unique_id="daily_activity_steps",
         icon="mdi:shoe-print",
+        attributes_keys=[],
     ),
     # exercise
     PolarEntityDescription(
@@ -86,6 +89,7 @@ SENSORS = (
         key="start_time",
         name="Last exercise",
         unique_id="last_exercise",
+        icon="mdi:run",
         attributes_keys=[
             "distance",
             "duration",
@@ -96,7 +100,6 @@ SENSORS = (
             "running_index",
             "device",
         ],
-        icon="mdi:run",
     ),
     # sleep
     PolarEntityDescription(
@@ -104,7 +107,7 @@ SENSORS = (
         key="sleep_score",
         name="Last sleep score",
         unique_id="last_sleep",
-        native_unit_of_measurement="score",
+        icon="mdi:sleep",
         attributes_keys=[
             "date",
             "sleep_start_time",
@@ -126,7 +129,6 @@ SENSORS = (
             "group_solidity_score",
             "group_regeneration_score",
         ],
-        icon="mdi:sleep",
     ),
     # recharge
     PolarEntityDescription(
@@ -135,6 +137,7 @@ SENSORS = (
         name="Last nightly recharge",
         unique_id="last_recharge",
         native_unit_of_measurement="score",
+        icon="mdi:bed-clock",
         attributes_keys=[
             "date",
             "heart_rate_avg",
@@ -144,7 +147,6 @@ SENSORS = (
             "ans_charge",
             "ans_charge_status",
         ],
-        icon="mdi:bed-clock",
     ),
 )
 
@@ -154,7 +156,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Polar sensor platform."""
     coordinator: PolarCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(PolarSensor(coordinator, description) for description in SENSORS)
+    async_add_entities(
+        PolarSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
+    )
 
 
 class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):

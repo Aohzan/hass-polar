@@ -1,4 +1,5 @@
 """Config flow for Polar integration."""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +11,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.http import HomeAssistantView
+from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
 from homeassistant.const import (
     CONF_ACCESS_TOKEN,
     CONF_CLIENT_ID,
@@ -19,7 +21,6 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.config_entry_oauth2_flow import _decode_jwt, _encode_jwt
 
 from .const import (
@@ -67,7 +68,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         if user_input is None:
             self.hass.http.register_view(PolarAuthCallbackView())
@@ -88,7 +89,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_oauth()
 
-    async def async_step_oauth(self, user_input=None) -> FlowResult:
+    async def async_step_oauth(self, user_input=None) -> ConfigFlowResult:
         """Proceed oauth."""
         if not user_input:
             return self.async_external_step(
@@ -111,7 +112,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_creation(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Create config entry from external data."""
         token_response = await self.hass.async_add_executor_job(
             self.accesslink.get_access_token, self.external_data["code"]
@@ -130,10 +131,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_show_form(
                     step_id="user",
                     data_schema=_get_user_data_schema(self.hass.config.external_url),
-                    errors={"http_error": err.response.status_code},
+                    errors={"http_error": str(err.response.status_code)},
                 )
 
-        await self.async_set_unique_id(self.data[CONF_USER_ID])
+        await self.async_set_unique_id(str(self.data[CONF_USER_ID]))
         self._abort_if_unique_id_configured()
 
         userdata = await self.hass.async_add_executor_job(
@@ -151,7 +152,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        config_entry: ConfigEntry,
     ) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
@@ -160,11 +161,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle Polar options."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None) -> FlowResult:
+    async def async_step_init(self, user_input=None) -> ConfigFlowResult:
         """Handle options flow."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -189,7 +190,6 @@ class PolarAuthCallbackView(HomeAssistantView):
     url = AUTH_CALLBACK_PATH
     name = AUTH_CALLBACK_NAME
 
-    @callback
     async def get(self, request: web.Request) -> web.Response:
         """Receive authorization token."""
         if "state" not in request.query:
