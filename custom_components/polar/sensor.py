@@ -107,6 +107,7 @@ SENSOR_DESCRIPTIONS = (
         key="sleep_score",
         name="Last sleep score",
         unique_id="last_sleep",
+        native_unit_of_measurement="score",
         icon="mdi:sleep",
         attributes_keys=[
             "date",
