@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- fix entry unique id (needs two restarts)
+
 ## 1.3.0
 
 - fix local storage path
