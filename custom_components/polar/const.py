@@ -20,3 +20,5 @@ AUTH_CALLBACK_NAME = "api:polar_auth"
 AUTH_CALLBACK_PATH = "/api/polar_auth"
 
 ATTRIBUTION = "Data provided by Polar"
+
+ADMIN_URL = "https://admin.polaraccesslink.com"

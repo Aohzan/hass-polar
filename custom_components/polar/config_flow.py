@@ -24,6 +24,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.config_entry_oauth2_flow import _decode_jwt, _encode_jwt
 
 from .const import (
+    ADMIN_URL,
     AUTH_CALLBACK_NAME,
     AUTH_CALLBACK_PATH,
     CONF_USER_ID,
@@ -75,6 +76,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             return self.async_show_form(
                 step_id="user",
+                description_placeholders={
+                    "polar_admin_url": ADMIN_URL,
+                },
                 data_schema=_get_user_data_schema(
                     self.hass.config.external_url or self.hass.config.internal_url
                 ),

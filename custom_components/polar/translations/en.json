@@ -16,7 +16,7 @@
                     "external_url": "URL for Home-Assistant (used in callback url)",
                     "scan_interval": "Scan Interval (minutes)"
                 },
-                "description": "Get your credentials from https://admin.polaraccesslink.com",
+                "description": "Get your credentials from [Polar AccessLink admin console]({polar_admin_url})",
                 "title": "Polar integration"
             }
         }
