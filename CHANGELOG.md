@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.4.1](https://github.com/Aohzan/hass-polar/compare/1.4.0...1.4.1) (2026-01-30)
+
+### Bug Fixes
+
+* remove URL from translations files ([#13](https://github.com/Aohzan/hass-polar/issues/13)) ([7f7589b](https://github.com/Aohzan/hass-polar/commit/7f7589b8a8155f58d01382eb1d7adff37c7fdec1))
+
 ## [1.4.0](https://github.com/Aohzan/hass-polar/compare/1.3.2...1.4.0) (2025-04-23)
 
 ### Features
