@@ -16,7 +16,7 @@
                     "external_url": "URL d'accès à Home-Assistant (utilisé pour l'URL de callback)",
                     "scan_interval": "Interval entre deux mises à jour (minutes)"
                 },
-                "description": "Obtenez vos identifiants depuis https://admin.polaraccesslink.com",
+                "description": "Obtenez vos identifiants depuis [la console d'administration Polar AccessLink]({polar_admin_url})",
                 "title": "Intégration Polar"
             }
         }

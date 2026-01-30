@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Polar integration",
-        "description": "Get your credentials from https://admin.polaraccesslink.com",
+        "description": "Get your credentials from [Polar AccessLink admin console]({polar_admin_url})",
         "data": {
           "client_id": "Client ID",
           "client_secret": "Client secret",
