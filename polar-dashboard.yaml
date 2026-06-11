@@ -1,0 +1,195 @@
+# ============================================================================
+#  Polar – dashboard for training + sleep tracking
+# ============================================================================
+#  Uses only built-in cards (sections view, tile, statistics-graph) - no custom
+#  HACS cards required.
+#
+#  ENTITY IDS: the Polar sensors are prefixed with your device name. For a
+#  device called "Polar Loop" they look like sensor.polar_loop_deep_sleep.
+#  If yours differ, in the raw editor find-replace "sensor.polar_loop_" with
+#  your own prefix (check Developer Tools -> States).
+#
+#  The backfilled history is attached to the sensors themselves, so the
+#  statistics-graph cards simply chart the sensor.polar_loop_* entities.
+# ============================================================================
+
+title: Polar
+views:
+  # ==========================================================================
+  #  VIEW 1 – TODAY  (sections view, live data)
+  # ==========================================================================
+  - title: Today
+    path: today
+    type: sections
+    max_columns: 3
+    icon: mdi:heart-pulse
+    badges:
+      - type: entity
+        entity: sensor.polar_loop_heart_rate
+        color: red
+      - type: entity
+        entity: sensor.polar_loop_heart_rate_variability
+        color: teal
+      - type: entity
+        entity: sensor.polar_loop_last_nightly_recharge
+        color: indigo
+      - type: entity
+        entity: sensor.polar_loop_daily_activity_steps
+        color: green
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Now
+            heading_style: title
+            icon: mdi:heart-pulse
+          - type: tile
+            entity: sensor.polar_loop_heart_rate
+            name: Heart rate
+            color: red
+          - type: tile
+            entity: sensor.polar_loop_heart_rate_variability
+            name: HRV
+            color: teal
+          - type: tile
+            entity: sensor.polar_loop_breathing_rate
+            name: Breathing
+            color: light-blue
+          - type: tile
+            entity: sensor.polar_loop_weight
+            name: Weight
+            color: blue-grey
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Last night
+            heading_style: title
+            icon: mdi:sleep
+          - type: tile
+            entity: sensor.polar_loop_last_sleep_score
+            name: Sleep score
+            color: green
+          - type: tile
+            entity: sensor.polar_loop_deep_sleep
+            name: Deep
+            color: indigo
+          - type: tile
+            entity: sensor.polar_loop_light_sleep
+            name: Light
+            color: blue
+          - type: tile
+            entity: sensor.polar_loop_rem_sleep
+            name: REM
+            color: purple
+          - type: tile
+            entity: sensor.polar_loop_last_nightly_recharge
+            name: Nightly Recharge
+            color: indigo
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Last workout
+            heading_style: title
+            icon: mdi:run-fast
+          - type: tile
+            entity: sensor.polar_loop_last_exercise
+            name: Last exercise
+            color: deep-orange
+          - type: tile
+            entity: sensor.polar_loop_last_exercise_heart_rate_average
+            name: HR avg
+            color: orange
+          - type: tile
+            entity: sensor.polar_loop_last_exercise_heart_rate_maximum
+            name: HR max
+            color: red
+          - type: tile
+            entity: sensor.polar_loop_cardio_load
+            name: Cardio load
+            color: amber
+
+  # ==========================================================================
+  #  VIEW 2 – SLEEP  (history)
+  # ==========================================================================
+  - title: Sleep
+    path: sleep
+    icon: mdi:sleep
+    cards:
+      - type: statistics-graph
+        title: Sleep stages – last 28 days
+        chart_type: bar
+        period: day
+        days_to_show: 30
+        stat_types:
+          - mean
+        entities:
+          - entity: sensor.polar_loop_deep_sleep
+            name: Deep
+          - entity: sensor.polar_loop_light_sleep
+            name: Light
+          - entity: sensor.polar_loop_rem_sleep
+            name: REM
+
+      - type: statistics-graph
+        title: Sleep score – last 28 days
+        chart_type: line
+        period: day
+        days_to_show: 30
+        stat_types:
+          - mean
+        entities:
+          - entity: sensor.polar_loop_last_sleep_score
+            name: Sleep score
+
+      - type: statistics-graph
+        title: HRV and breathing (night) – last 28 days
+        chart_type: line
+        period: day
+        days_to_show: 30
+        stat_types:
+          - mean
+        entities:
+          - entity: sensor.polar_loop_heart_rate_variability
+            name: HRV
+          - entity: sensor.polar_loop_breathing_rate
+            name: Breathing
+
+  # ==========================================================================
+  #  VIEW 3 – TRAINING
+  # ==========================================================================
+  - title: Training
+    path: training
+    icon: mdi:run-fast
+    cards:
+      - type: statistics-graph
+        title: Cardio load – last 28 days
+        chart_type: bar
+        period: day
+        days_to_show: 30
+        stat_types:
+          - mean
+        entities:
+          - entity: sensor.polar_loop_cardio_load
+            name: Cardio load
+
+      - type: statistics-graph
+        title: Heart rate (continuous) – last 7 days, hourly
+        chart_type: line
+        period: hour
+        days_to_show: 7
+        stat_types:
+          - mean
+          - min
+          - max
+        entities:
+          - entity: sensor.polar_loop_heart_rate
+            name: Heart rate
+
+      - type: history-graph
+        title: Heart rate today (live)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.polar_loop_heart_rate
+            name: Heart rate

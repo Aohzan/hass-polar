@@ -31,7 +31,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
-from .polaraccesslink.accesslink import AccessLink
+from .polaraccesslink.accesslink import AUTHORIZATION_URL, AccessLink
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,6 +67,63 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.external_data: dict[str, Any] = {}
         self.accesslink: AccessLink
 
+    def _show_user_form(
+        self, default_external_url: str | None, error: str | None = None
+    ) -> ConfigFlowResult:
+        """Show the user step form, optionally with an error."""
+        return self.async_show_form(
+            step_id="user",
+            description_placeholders={
+                "polar_admin_url": ADMIN_URL,
+            },
+            data_schema=_get_user_data_schema(default_external_url),
+            errors={"base": error} if error else None,
+        )
+
+    def _test_connection(self) -> str | None:
+        """Check connectivity to Polar and that the client_id is accepted.
+
+        Runs in an executor (uses blocking ``requests``). Returns an error key
+        to show on the form, or ``None`` when the connection looks good.
+        """
+        auth_url = self.accesslink.get_authorization_url()
+        _LOGGER.info(
+            "Polar: testing connection to authorization endpoint %s", AUTHORIZATION_URL
+        )
+        try:
+            response = requests.get(auth_url, timeout=30, allow_redirects=False)
+        except requests.exceptions.RequestException as err:
+            _LOGGER.error(
+                "Polar: connection test FAILED, cannot reach Polar (%s): %s",
+                AUTHORIZATION_URL,
+                err,
+            )
+            return "cannot_connect"
+
+        body = (response.text or "")[:500]
+        if "invalid_client" in body.lower() or response.status_code in (400, 401):
+            _LOGGER.error(
+                "Polar: connection test FAILED, client credentials rejected "
+                "(HTTP %s): %s",
+                response.status_code,
+                body,
+            )
+            return "invalid_auth"
+
+        if response.status_code >= 500:
+            _LOGGER.error(
+                "Polar: connection test FAILED, Polar server error (HTTP %s)",
+                response.status_code,
+            )
+            return "cannot_connect"
+
+        _LOGGER.info(
+            "Polar: connection test OK (HTTP %s), client_id accepted, "
+            "proceeding to OAuth login",
+            response.status_code,
+        )
+        return None
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -74,22 +131,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is None:
             self.hass.http.register_view(PolarAuthCallbackView())
 
-            return self.async_show_form(
-                step_id="user",
-                description_placeholders={
-                    "polar_admin_url": ADMIN_URL,
-                },
-                data_schema=_get_user_data_schema(
-                    self.hass.config.external_url or self.hass.config.internal_url
-                ),
+            return self._show_user_form(
+                self.hass.config.external_url or self.hass.config.internal_url
             )
 
         self.data = user_input
-        self.accesslink = AccessLink(
-            client_id=self.data[CONF_CLIENT_ID],
-            client_secret=self.data[CONF_CLIENT_SECRET],
-            redirect_url=_get_callback_url(user_input[CONF_EXTERNAL_URL]),
-        )
+        try:
+            self.accesslink = AccessLink(
+                client_id=self.data[CONF_CLIENT_ID],
+                client_secret=self.data[CONF_CLIENT_SECRET],
+                redirect_url=_get_callback_url(user_input[CONF_EXTERNAL_URL]),
+            )
+        except ValueError as err:
+            _LOGGER.error("Polar: invalid client configuration: %s", err)
+            return self._show_user_form(user_input[CONF_EXTERNAL_URL], "invalid_auth")
+
+        if error := await self.hass.async_add_executor_job(self._test_connection):
+            return self._show_user_form(user_input[CONF_EXTERNAL_URL], error)
 
         return await self.async_step_oauth()
 

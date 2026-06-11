@@ -6,7 +6,8 @@
   ],
   "config_flow": true,
   "dependencies": [
-    "http"
+    "http",
+    "recorder"
   ],
   "documentation": "https://github.com/Aohzan/hass-polar",
   "integration_type": "service",

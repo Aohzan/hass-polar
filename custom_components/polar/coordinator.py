@@ -17,8 +17,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    ATTR_CARDIO_LOAD_DATA,
+    ATTR_CONTINUOUS_HEART_RATE,
     ATTR_DAILY_DATA,
     ATTR_EXERCISE_DATA,
+    ATTR_LAST_CARDIO_LOAD,
     ATTR_LAST_DAILY,
     ATTR_LAST_EXERCISE,
     ATTR_LAST_RECHARGE,
@@ -89,14 +92,24 @@ class PolarCoordinator(DataUpdateCoordinator):
                 f".storage/polar_dailydata_{self._entry.entry_id}.json"
             ),
         )
+        cardioloaddata = await self.hass.async_add_executor_job(
+            self.accesslink.get_cardio_load, self._entry.data[CONF_ACCESS_TOKEN]
+        )
+        continuousheartrate = await self.hass.async_add_executor_job(
+            self.accesslink.get_continuous_heart_rate,
+            self._entry.data[CONF_ACCESS_TOKEN],
+        )
         return {
             ATTR_USER_DATA: userdata,
             ATTR_EXERCISE_DATA: exercisedata,
             ATTR_SLEEP_DATA: sleepdata,
             ATTR_RECHARGE_DATA: rechargedata,
             ATTR_DAILY_DATA: dailydata,
+            ATTR_CARDIO_LOAD_DATA: cardioloaddata,
             ATTR_LAST_EXERCISE: next(iter(exercisedata), {}),
             ATTR_LAST_SLEEP: next(iter(sleepdata), {}),
             ATTR_LAST_RECHARGE: next(iter(rechargedata), {}),
             ATTR_LAST_DAILY: next(iter(dailydata), {}),
+            ATTR_LAST_CARDIO_LOAD: next(iter(cardioloaddata), {}),
+            ATTR_CONTINUOUS_HEART_RATE: continuousheartrate,
         }

@@ -1,10 +1,11 @@
 """Accesslink library."""
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import json
 import logging
 from os import path
 
 import isodate
+from requests.exceptions import HTTPError
 
 from .endpoints.daily_activity import DailyActivity
 from .endpoints.physical_info import PhysicalInfo
@@ -61,6 +62,11 @@ class AccessLink:
         exercises = self.oauth.get(endpoint="/exercises", access_token=access_token)
         for exercise in exercises:
             exercise["duration"] = parse_date(exercise["duration"])
+            # Flatten the nested heart-rate statistics so they can be exposed
+            # as dedicated sensors (the API returns {"average": .., "maximum": ..}).
+            heart_rate = exercise.get("heart_rate") or exercise.get("heart-rate") or {}
+            exercise["heart_rate_average"] = heart_rate.get("average")
+            exercise["heart_rate_maximum"] = heart_rate.get("maximum")
         return sorted(
             exercises,
             key=lambda t: datetime.strptime(t["start_time"], "%Y-%m-%dT%H:%M:%S"),
@@ -88,6 +94,94 @@ class AccessLink:
             key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
             reverse=True,
         )
+
+    def get_continuous_heart_rate(self, access_token):
+        """Get latest continuous heart rate samples.
+
+        Tries today first and falls back to yesterday, since the current day
+        may not have any samples yet. Returns a summary dict with the latest
+        value plus min/max/average computed from the 5-minute samples, or an
+        empty dict when no data is available (or the device does not support
+        continuous heart rate).
+        """
+        for day in (date.today(), date.today() - timedelta(days=1)):
+            try:
+                data = self.oauth.get(
+                    endpoint=f"/users/continuous-heart-rate/{day.isoformat()}",
+                    access_token=access_token,
+                )
+            except HTTPError as err:
+                status = getattr(err.response, "status_code", None)
+                if status == 404:
+                    continue
+                _LOGGER.warning(
+                    "Unable to get continuous heart rate (HTTP %s)", status
+                )
+                return {}
+
+            values = [
+                sample["heart_rate"]
+                for sample in data.get("heart_rate_samples") or []
+                if sample.get("heart_rate") is not None
+            ]
+            if values:
+                return {
+                    "date": data.get("date"),
+                    "latest": values[-1],
+                    "min": min(values),
+                    "max": max(values),
+                    "average": round(sum(values) / len(values)),
+                    "samples_count": len(values),
+                }
+        return {}
+
+    def get_continuous_heart_rate_samples(self, access_token, day):
+        """Return raw continuous heart rate samples for an ISO date.
+
+        Used for historical statistics import. Returns the list of
+        ``{"heart_rate", "sample_time"}`` samples, or an empty list when there
+        is no data for the day (or the device does not support it).
+        """
+        try:
+            data = self.oauth.get(
+                endpoint=f"/users/continuous-heart-rate/{day}",
+                access_token=access_token,
+            )
+        except HTTPError as err:
+            status = getattr(err.response, "status_code", None)
+            if status != 404:
+                _LOGGER.warning(
+                    "Unable to get continuous heart rate for %s (HTTP %s)",
+                    day,
+                    status,
+                )
+            return []
+        return data.get("heart_rate_samples") or []
+
+    def get_cardio_load(self, access_token):
+        """Get cardio load (training load) entries for the last 28 days.
+
+        Entries without a computed value (status ``LOAD_STATUS_NOT_AVAILABLE``)
+        are filtered out. Returns the remaining entries sorted most recent
+        first, or an empty list when no data is available.
+        """
+        try:
+            data = self.oauth.get(
+                endpoint="/users/cardio-load", access_token=access_token
+            )
+        except HTTPError as err:
+            _LOGGER.warning(
+                "Unable to get cardio load (HTTP %s)",
+                getattr(err.response, "status_code", None),
+            )
+            return []
+
+        entries = [
+            entry
+            for entry in (data or [])
+            if entry.get("cardio_load_status") != "LOAD_STATUS_NOT_AVAILABLE"
+        ]
+        return sorted(entries, key=lambda entry: entry.get("date", ""), reverse=True)
 
     def get_userdata(self, user_id, access_token):
         """Get user data."""
