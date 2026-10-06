@@ -1,0 +1,162 @@
+# Polar dashboard: today's snapshot, sleep and training history.
+# Only built-in cards are used (sections view, tile, statistics-graph).
+#
+# Before pasting it in the raw configuration editor of a new dashboard,
+# replace these placeholders (see Developer tools > States and Statistics):
+# - "sensor.john_doe_": prefix of your Polar sensors (your Polar name)
+# - "polar:123456789_": prefix of the imported history (your Polar user id)
+
+title: Polar
+views:
+  - title: Today
+    path: today
+    type: sections
+    max_columns: 3
+    icon: mdi:heart-pulse
+    badges:
+      - type: entity
+        entity: sensor.john_doe_heart_rate_variability
+        color: teal
+      - type: entity
+        entity: sensor.john_doe_last_nightly_recharge
+        color: indigo
+      - type: entity
+        entity: sensor.john_doe_daily_activity_steps
+        color: green
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Now
+            heading_style: title
+            icon: mdi:heart-pulse
+          - type: tile
+            entity: sensor.john_doe_heart_rate_variability
+            name: HRV
+            color: teal
+          - type: tile
+            entity: sensor.john_doe_breathing_rate
+            name: Breathing
+            color: light-blue
+          - type: tile
+            entity: sensor.john_doe_weight
+            name: Weight
+            color: blue-grey
+      - type: grid
+        cards:
+          - type: heading
+            heading: Last night
+            heading_style: title
+            icon: mdi:sleep
+          - type: tile
+            entity: sensor.john_doe_last_sleep_score
+            name: Sleep score
+            color: green
+          - type: tile
+            entity: sensor.john_doe_deep_sleep
+            name: Deep
+            color: indigo
+          - type: tile
+            entity: sensor.john_doe_light_sleep
+            name: Light
+            color: blue
+          - type: tile
+            entity: sensor.john_doe_rem_sleep
+            name: REM
+            color: purple
+          - type: tile
+            entity: sensor.john_doe_last_nightly_recharge
+            name: Nightly Recharge
+            color: indigo
+      - type: grid
+        cards:
+          - type: heading
+            heading: Last workout
+            heading_style: title
+            icon: mdi:run-fast
+          - type: tile
+            entity: sensor.john_doe_last_exercise
+            name: Last exercise
+            color: deep-orange
+          - type: tile
+            entity: sensor.john_doe_last_exercise_heart_rate_average
+            name: HR avg
+            color: orange
+          - type: tile
+            entity: sensor.john_doe_last_exercise_heart_rate_maximum
+            name: HR max
+            color: red
+          - type: tile
+            entity: sensor.john_doe_cardio_load
+            name: Cardio load
+            color: amber
+
+  - title: Sleep
+    path: sleep
+    icon: mdi:sleep
+    cards:
+      - type: statistics-graph
+        title: Sleep stages
+        chart_type: bar
+        period: day
+        days_to_show: 28
+        stat_types:
+          - mean
+        entities:
+          - entity: polar:123456789_deep_sleep
+            name: Deep
+          - entity: polar:123456789_light_sleep
+            name: Light
+          - entity: polar:123456789_rem_sleep
+            name: REM
+      - type: statistics-graph
+        title: Sleep score and Nightly Recharge
+        chart_type: line
+        period: day
+        days_to_show: 28
+        stat_types:
+          - mean
+        entities:
+          - entity: polar:123456789_sleep_score
+            name: Sleep score
+          - entity: polar:123456789_nightly_recharge_status
+            name: Nightly Recharge
+      - type: statistics-graph
+        title: HRV and breathing rate
+        chart_type: line
+        period: day
+        days_to_show: 28
+        stat_types:
+          - mean
+        entities:
+          - entity: polar:123456789_heart_rate_variability
+            name: HRV
+          - entity: polar:123456789_breathing_rate
+            name: Breathing
+
+  - title: Training
+    path: training
+    icon: mdi:run-fast
+    cards:
+      - type: statistics-graph
+        title: Cardio load
+        chart_type: bar
+        period: day
+        days_to_show: 28
+        stat_types:
+          - mean
+        entities:
+          - entity: polar:123456789_cardio_load
+            name: Cardio load
+      - type: statistics-graph
+        title: Heart rate
+        chart_type: line
+        period: hour
+        days_to_show: 7
+        stat_types:
+          - mean
+          - min
+          - max
+        entities:
+          - entity: polar:123456789_heart_rate
+            name: Heart rate

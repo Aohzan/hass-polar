@@ -55,6 +55,12 @@ Polar keeps the last 28 days of data, but sensors only record history from the m
 
 These statistics are separate from the sensors' own statistics, which only start when the sensor is created.
 
+## Dashboard
+
+[`dashboard/polar.yaml`](./dashboard/polar.yaml) is a ready-to-use dashboard with today's values, and the sleep and training history. It only uses built-in cards: create a new dashboard, open the raw configuration editor and paste it, after replacing the placeholders described at the top of the file.
+
+![Polar dashboard](./dashboard/screenshot.png)
+
 ## Credits
 
 Thanks to https://github.com/burnnat/ha-polar
