@@ -1,118 +1,39 @@
 """OAuth access for Polar Access Link."""
+
 import logging
-from urllib.parse import urlencode
 
 import requests
-from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 
 _LOGGER = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT = 60
+
 
 class OAuth2Client:
-    """Wrapper class for OAuth2 requests."""
+    """Make requests to Polar Access Link on behalf of a user."""
 
-    def __init__(
-        self,
-        url,
-        authorization_url,
-        access_token_url,
-        redirect_url,
-        client_id,
-        client_secret,
-    ):
+    def __init__(self, url):
         """Init the client object."""
         self.url = url
-        self.authorization_url = authorization_url
-        self.access_token_url = access_token_url
-        self.redirect_url = redirect_url
-        self.client_id = client_id
-        self.client_secret = client_secret
+        self.session = requests.Session()
+
+    def close(self):
+        """Close the underlying HTTP connections."""
+        self.session.close()
 
     def get_auth_headers(self, access_token):
         """Get authorization headers for user level api resources."""
-
         return {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
 
-    def get_authorization_url(self, response_type="code", state=None):
-        """Build authorization url for the client."""
-
-        params = {
-            "client_id": self.client_id,
-            "response_type": response_type,
-        }
-
-        if state:
-            params["state"] = state
-
-        if self.redirect_url:
-            params["redirect_uri"] = self.redirect_url
-
-        return "{url}?{params}".format(
-            url=self.authorization_url, params=urlencode(params)
-        )
-
-    def get_access_token(self, authorization_code):
-        """Exchange authorization code for an access token."""
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json;charset=UTF-8",
-        }
-
-        data = {"grant_type": "authorization_code", "code": authorization_code}
-
-        if self.redirect_url:
-            data["redirect_uri"] = self.redirect_url
-
-        _LOGGER.debug("Fetching access token from auth code")
-
-        return self.post(
-            endpoint=None, url=self.access_token_url, data=data, headers=headers
-        )
-
-    def __build_endpoint_kwargs(self, **kwargs):
-        """Create endpoint url for requests."""
-
-        if "endpoint" in kwargs:
-            if kwargs["endpoint"] is not None:
-                kwargs["url"] = self.url + kwargs["endpoint"]
-            del kwargs["endpoint"]
-
-        return kwargs
-
-    def __build_auth_kwargs(self, **kwargs):
-        """Build the authentication to make requests."""
-
-        if "access_token" in kwargs:
-            headers = self.get_auth_headers(kwargs["access_token"])
-
-            if "headers" in kwargs:
-                headers.update(kwargs["headers"])
-
-            kwargs["headers"] = headers
-            del kwargs["access_token"]
-        elif "auth" not in kwargs:
-            kwargs["auth"] = HTTPBasicAuth(self.client_id, self.client_secret)
-
-        return kwargs
-
-    def __build_request_kwargs(self, **kwargs):
-        """Build requests."""
-        kwargs = self.__build_endpoint_kwargs(**kwargs)
-        kwargs = self.__build_auth_kwargs(**kwargs)
-        return kwargs
-
     def __parse_response(self, response):
         """Parse response."""
         if response.status_code >= 400:
-            message = "{code} {reason}: {body}".format(
-                code=response.status_code, reason=response.reason, body=response.text
-            )
+            message = f"{response.status_code} {response.reason}: {response.text}"
             raise HTTPError(message, response=response)
 
         if response.status_code == 204:
@@ -123,27 +44,34 @@ class OAuth2Client:
         except ValueError:
             return response.text
 
-    def __request(self, method, **kwargs):
-        """Make a request."""
-        kwargs = self.__build_request_kwargs(**kwargs)
+    def __request(self, method, endpoint, access_token, url=None, **kwargs):
+        """Make a request, to `url` or to the `endpoint` of the API."""
+        if endpoint is not None:
+            url = self.url + endpoint
 
-        _LOGGER.debug("%s request to URL: %s", method.upper(), kwargs["url"])
+        _LOGGER.debug("%s request to URL: %s", method.upper(), url)
 
-        response = requests.request(method=method, timeout=60, **kwargs)
+        response = self.session.request(
+            method=method,
+            url=url,
+            headers=self.get_auth_headers(access_token),
+            timeout=REQUEST_TIMEOUT,
+            **kwargs,
+        )
         return self.__parse_response(response)
 
-    def get(self, endpoint, **kwargs):
+    def get(self, endpoint, access_token, **kwargs):
         """Make a GET request."""
-        return self.__request("get", endpoint=endpoint, **kwargs)
+        return self.__request("get", endpoint, access_token, **kwargs)
 
-    def post(self, endpoint, **kwargs):
+    def post(self, endpoint, access_token, **kwargs):
         """Make a POST request."""
-        return self.__request("post", endpoint=endpoint, **kwargs)
+        return self.__request("post", endpoint, access_token, **kwargs)
 
-    def put(self, endpoint, **kwargs):
+    def put(self, endpoint, access_token, **kwargs):
         """Make a PUT request."""
-        return self.__request("put", endpoint=endpoint, **kwargs)
+        return self.__request("put", endpoint, access_token, **kwargs)
 
-    def delete(self, endpoint, **kwargs):
+    def delete(self, endpoint, access_token, **kwargs):
         """Make a DELETE request."""
-        return self.__request("delete", endpoint=endpoint, **kwargs)
+        return self.__request("delete", endpoint, access_token, **kwargs)

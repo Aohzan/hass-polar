@@ -6,7 +6,7 @@
   ],
   "config_flow": true,
   "dependencies": [
-    "http",
+    "application_credentials",
     "recorder"
   ],
   "documentation": "https://github.com/Aohzan/hass-polar",

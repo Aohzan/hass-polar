@@ -1,34 +1,101 @@
 {
+    "application_credentials": {
+        "description": "Créez un client dans [la console d'administration Polar AccessLink]({polar_admin_url}) avec `{redirect_url}` comme URL de callback d'autorisation, puis saisissez son ID et son secret."
+    },
     "config": {
         "abort": {
-            "already_configured": "Déjà configuré"
-        },
-        "error": {
+            "already_configured": "Ce compte est déjà configuré",
+            "already_in_progress": "Une configuration est déjà en cours",
+            "authorize_url_timeout": "Délai dépassé lors de la génération de l'URL d'autorisation.",
             "cannot_connect": "Impossible de se connecter",
-            "invalid_auth": "Problème d'authentification",
-            "unknown": "Erreur inconnue"
+            "missing_configuration": "Le composant n'est pas configuré. Veuillez suivre la documentation.",
+            "missing_credentials": "L'intégration nécessite des identifiants d'application.",
+            "no_url_available": "Aucune URL disponible. Pour plus d'informations, [consultez l'aide]({docs_url})",
+            "oauth_error": "Données de jeton invalides.",
+            "oauth_failed": "Erreur lors de l'obtention du jeton d'accès.",
+            "oauth_implementation_unavailable": "Aucune implémentation OAuth2 n'est disponible.",
+            "oauth_timeout": "Délai dépassé lors de l'obtention du jeton OAuth.",
+            "oauth_unauthorized": "Erreur d'autorisation OAuth lors de l'obtention du jeton d'accès.",
+            "reauth_successful": "Réauthentification réussie",
+            "user_rejected_authorize": "Liaison du compte refusée : {error}",
+            "wrong_account": "Le compte Polar authentifié ne correspond pas à cette entrée."
+        },
+        "create_entry": {
+            "default": "Authentification réussie"
         },
         "step": {
-            "user": {
-                "data": {
-                    "client_id": "Client ID",
-                    "client_secret": "Client secret",
-                    "external_url": "URL d'accès à Home-Assistant (utilisé pour l'URL de callback)",
-                    "scan_interval": "Interval entre deux mises à jour (minutes)"
-                },
-                "description": "Obtenez vos identifiants depuis [la console d'administration Polar AccessLink]({polar_admin_url})",
-                "title": "Intégration Polar"
+            "auth": {
+                "title": "Lier Polar"
+            },
+            "pick_implementation": {
+                "title": "Choisissez la méthode d'authentification"
+            },
+            "reauth_confirm": {
+                "title": "Authentification expirée pour {name}",
+                "description": "L'intégration Polar doit réauthentifier votre compte"
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "weight": {
+                "name": "Poids"
+            },
+            "daily_activity_calories": {
+                "name": "Calories de l'activité quotidienne"
+            },
+            "daily_activity_duration": {
+                "name": "Durée de l'activité quotidienne"
+            },
+            "daily_activity_steps": {
+                "name": "Pas de l'activité quotidienne"
+            },
+            "last_exercise": {
+                "name": "Dernier entraînement"
+            },
+            "last_exercise_heart_rate_average": {
+                "name": "Fréquence cardiaque moyenne du dernier entraînement"
+            },
+            "last_exercise_heart_rate_maximum": {
+                "name": "Fréquence cardiaque maximale du dernier entraînement"
+            },
+            "last_sleep": {
+                "name": "Score du dernier sommeil"
+            },
+            "deep_sleep": {
+                "name": "Sommeil profond"
+            },
+            "light_sleep": {
+                "name": "Sommeil léger"
+            },
+            "rem_sleep": {
+                "name": "Sommeil paradoxal"
+            },
+            "last_recharge": {
+                "name": "Dernière Nightly Recharge"
+            },
+            "heart_rate_variability": {
+                "name": "Variabilité de la fréquence cardiaque"
+            },
+            "breathing_rate": {
+                "name": "Fréquence respiratoire"
+            },
+            "cardio_load": {
+                "name": "Charge cardio"
             }
         }
     },
     "options": {
         "step": {
             "init": {
-                "data": {
-                    "scan_interval": "Interval entre deux mises à jour (minutes)"
-                },
+                "title": "Options Polar",
                 "description": "Configuration de l'intégration Polar",
-                "title": "Options Polar"
+                "data": {
+                    "scan_interval": "Intervalle entre deux mises à jour (minutes)"
+                },
+                "data_description": {
+                    "scan_interval": "Intervalle entre deux mises à jour depuis l'API Polar."
+                }
             }
         }
     }

@@ -1,10 +1,11 @@
 """Daily activity endpoint."""
+
 from .daily_activity_transaction import DailyActivityTransaction
 from .resource import Resource
 
 
 class DailyActivity(Resource):
-    """This resource allows partners to access their users' daily activity data."""
+    """Access the daily activity data of the users."""
 
     def create_transaction(self, user_id, access_token):
         """Initiate daily activity transaction."""
