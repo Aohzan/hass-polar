@@ -91,7 +91,43 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             redirect_url=_get_callback_url(user_input[CONF_EXTERNAL_URL]),
         )
 
+        if error := await self.hass.async_add_executor_job(
+            self._check_client_credentials
+        ):
+            return self.async_show_form(
+                step_id="user",
+                description_placeholders={
+                    "polar_admin_url": ADMIN_URL,
+                },
+                data_schema=self.add_suggested_values_to_schema(
+                    _get_user_data_schema(user_input[CONF_EXTERNAL_URL]), user_input
+                ),
+                errors={"base": error},
+            )
+
         return await self.async_step_oauth()
+
+    def _check_client_credentials(self) -> str | None:
+        """Check that Polar is reachable and accepts the client credentials.
+
+        A dummy authorization code is exchanged: Polar authenticates the client
+        before looking at the code, so wrong credentials are rejected with 401
+        while valid ones only fail on the code itself.
+        Return an error key, or None when the credentials are valid.
+        """
+        try:
+            self.accesslink.get_access_token("connection_test")
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 401:
+                _LOGGER.warning("Polar rejected the client credentials: %s", err)
+                return "invalid_auth"
+            if err.response.status_code >= 500:
+                _LOGGER.warning("Polar is unavailable: %s", err)
+                return "cannot_connect"
+        except requests.exceptions.RequestException as err:
+            _LOGGER.warning("Unable to connect to Polar: %s", err)
+            return "cannot_connect"
+        return None
 
     async def async_step_oauth(self, user_input=None) -> ConfigFlowResult:
         """Proceed oauth."""
