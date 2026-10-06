@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.1](https://github.com/Aohzan/hass-polar/compare/2.0.0...2.0.1) (2026-10-06)
+
+### Bug Fixes
+
+* read Polar timestamps without time zone as UTC ([aab930c](https://github.com/Aohzan/hass-polar/commit/aab930c7468812e95e4f5a393164151745e6654d))
+
 ## [2.0.0](https://github.com/Aohzan/hass-polar/compare/1.5.0...2.0.0) (2026-10-06)
 
 ### ⚠ BREAKING CHANGES
