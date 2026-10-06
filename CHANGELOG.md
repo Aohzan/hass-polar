@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0](https://github.com/Aohzan/hass-polar/compare/1.4.1...1.5.0) (2026-10-06)
+
+### Features
+
+* credentials check, new sensors and history import ([#17](https://github.com/Aohzan/hass-polar/issues/17)) ([d91c9cf](https://github.com/Aohzan/hass-polar/commit/d91c9cff4378d541db78c17b7d82ba7ae2c29853))
+
 ## [1.4.1](https://github.com/Aohzan/hass-polar/compare/1.4.0...1.4.1) (2026-01-30)
 
 ### Bug Fixes
