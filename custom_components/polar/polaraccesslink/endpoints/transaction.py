@@ -1,4 +1,5 @@
 """Generic transaction."""
+
 from .resource import Resource
 
 

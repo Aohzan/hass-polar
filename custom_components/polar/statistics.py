@@ -31,8 +31,7 @@ from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
     get_last_statistics,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ACCESS_TOKEN, UnitOfTime
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
@@ -44,7 +43,7 @@ from .const import (
     ATTR_SLEEP_DATA,
     DOMAIN,
 )
-from .coordinator import PolarCoordinator
+from .coordinator import PolarConfigEntry, PolarCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -175,7 +174,10 @@ class PolarStatisticsImporter:
     """Publish the Polar history as external statistics."""
 
     def __init__(
-        self, hass: HomeAssistant, entry: ConfigEntry, coordinator: PolarCoordinator
+        self,
+        hass: HomeAssistant,
+        entry: PolarConfigEntry,
+        coordinator: PolarCoordinator,
     ) -> None:
         """Initialize the importer."""
         self.hass = hass
@@ -273,7 +275,7 @@ class PolarStatisticsImporter:
                 try:
                     samples_by_day[day] = await self.hass.async_add_executor_job(
                         self.coordinator.accesslink.get_continuous_heart_rate,
-                        self.entry.data[CONF_ACCESS_TOKEN],
+                        self.coordinator.access_token,
                         day.isoformat(),
                     )
                 except RequestException as err:

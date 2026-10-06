@@ -1,16 +1,12 @@
 """Accesslink library."""
+
 from datetime import datetime
-import json
 import logging
-from os import path
 
 import isodate
 from requests.exceptions import HTTPError
 
 from .endpoints.daily_activity import DailyActivity
-from .endpoints.physical_info import PhysicalInfo
-from .endpoints.pull_notifications import PullNotifications
-from .endpoints.training_data import TrainingData
 from .endpoints.users import Users
 from .oauth2 import OAuth2Client
 
@@ -21,47 +17,30 @@ ACCESSLINK_URL = "https://www.polaraccesslink.com/v3"
 _LOGGER = logging.getLogger(__name__)
 
 
-def parse_date(raw_date: str) -> str:
-    """Parse Polar date format."""
-    return str(isodate.parse_duration(raw_date))
+def format_duration(raw_duration: str) -> str:
+    """Format a Polar ISO 8601 duration as H:MM:SS."""
+    return str(isodate.parse_duration(raw_duration))
 
 
 class AccessLink:
     """Wrapper class for Polar Open AccessLink API v3."""
 
-    def __init__(self, client_id, client_secret, redirect_url=None):
+    def __init__(self):
         """Init an Accesslink access."""
-        if not client_id or not client_secret:
-            raise ValueError("Client id and secret must be provided.")
-
-        self.oauth = OAuth2Client(
-            url=ACCESSLINK_URL,
-            authorization_url=AUTHORIZATION_URL,
-            access_token_url=ACCESS_TOKEN_URL,
-            redirect_url=redirect_url,
-            client_id=client_id,
-            client_secret=client_secret,
-        )
-
+        self.oauth = OAuth2Client(url=ACCESSLINK_URL)
         self.users = Users(oauth=self.oauth)
-        self.pull_notifications = PullNotifications(oauth=self.oauth)
-        self.training_data = TrainingData(oauth=self.oauth)
-        self.physical_info = PhysicalInfo(oauth=self.oauth)
         self.daily_activity = DailyActivity(oauth=self.oauth)
 
-    def get_authorization_url(self, state=None):
-        """Get the authorization url for the client."""
-        return self.oauth.get_authorization_url(state=state)
-
-    def get_access_token(self, authorization_code):
-        """Request access token for a user."""
-        return self.oauth.get_access_token(authorization_code)
+    def close(self):
+        """Close the underlying HTTP connections."""
+        self.oauth.close()
 
     def get_exercises(self, access_token):
         """Get last exercises."""
         exercises = self.oauth.get(endpoint="/exercises", access_token=access_token)
         for exercise in exercises:
-            exercise["duration"] = parse_date(exercise["duration"])
+            if "duration" in exercise:
+                exercise["duration"] = format_duration(exercise["duration"])
         return sorted(
             exercises,
             key=lambda t: datetime.strptime(t["start_time"], "%Y-%m-%dT%H:%M:%S"),
@@ -131,65 +110,25 @@ class AccessLink:
 
     def get_userdata(self, user_id, access_token):
         """Get user data."""
-        return self.oauth.get(
-            endpoint="/users/" + str(user_id), access_token=access_token
-        )
+        return self.users.get_information(user_id, access_token)
 
-    def get_daily_activities(self, user_id, access_token, state_file_path):
-        """Get daily activities from Polar or backup file."""
-        activities = []
+    def get_daily_activities(self, user_id, access_token):
+        """Get the daily activity summaries synced since the last call.
 
+        Polar only returns the summaries that were not committed yet, and may
+        return several summaries for the same day (one per sync).
+        """
         transaction = self.daily_activity.create_transaction(
             user_id=user_id, access_token=access_token
         )
-
         if not transaction:
-            try:
-                if path.isfile(state_file_path):
-                    _LOGGER.debug(
-                        "No new daily activity available, get from backup file"
-                    )
-                    with open(state_file_path, encoding="utf-8") as state_file:
-                        activities = json.loads(state_file.read())
-                else:
-                    _LOGGER.debug(
-                        "No daily activity available, will try for the next sync"
-                    )
-            except OSError as exc:
-                _LOGGER.error(
-                    "Unable to get daily activities from backup file %s: %s",
-                    state_file_path,
-                    exc,
-                )
-        else:
-            _LOGGER.debug(
-                "New daily activity available, get it and save to backup file"
-            )
-            resource_urls = transaction.list_activities()["activity-log"]
+            _LOGGER.debug("No new daily activity available")
+            return []
 
-            for url in resource_urls:
-                actity = transaction.get_activity_summary(url)
-                actity["duration"] = parse_date(actity["duration"])
-                activities.append(actity)
-
-            transaction.commit()
-
-            # sort by date
-            activities = sorted(
-                activities,
-                key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
-                reverse=True,
-            )
-
-            # backup activities
-            try:
-                with open(state_file_path, "w+", encoding="utf-8") as state_file:
-                    json.dump(activities, state_file, sort_keys=True, indent=4)
-            except OSError as exc:
-                _LOGGER.error(
-                    "Unable to write daily activities to backup file %s: %s",
-                    state_file_path,
-                    exc,
-                )
-
+        activities = [
+            transaction.get_activity_summary(url)
+            for url in transaction.list_activities()["activity-log"]
+        ]
+        transaction.commit()
+        _LOGGER.debug("Got %s new daily activities", len(activities))
         return activities
