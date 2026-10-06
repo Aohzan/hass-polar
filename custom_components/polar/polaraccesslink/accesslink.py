@@ -5,6 +5,7 @@ import logging
 from os import path
 
 import isodate
+from requests.exceptions import HTTPError
 
 from .endpoints.daily_activity import DailyActivity
 from .endpoints.physical_info import PhysicalInfo
@@ -88,6 +89,45 @@ class AccessLink:
             key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
             reverse=True,
         )
+
+    def get_cardio_load(self, access_token):
+        """Get cardio loads of the last 28 days, most recent first.
+
+        Days without a computed value are dropped. Returns an empty list when
+        the data is not available (unsupported device or missing consents).
+        """
+        try:
+            cardioloads = self.oauth.get(
+                endpoint="/users/cardio-load", access_token=access_token
+            )
+        except HTTPError as err:
+            _LOGGER.debug("Unable to get cardio load: %s", err)
+            return []
+        return sorted(
+            (
+                cardioload
+                for cardioload in cardioloads or []
+                if cardioload.get("cardio_load_status") != "LOAD_STATUS_NOT_AVAILABLE"
+            ),
+            key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
+            reverse=True,
+        )
+
+    def get_continuous_heart_rate(self, access_token, day):
+        """Get continuous heart rate samples of a day (ISO-8601 date).
+
+        Returns an empty list when there is no data for that day or when the
+        data is not available (unsupported device or missing consents).
+        """
+        try:
+            heartrate = self.oauth.get(
+                endpoint=f"/users/continuous-heart-rate/{day}",
+                access_token=access_token,
+            )
+        except HTTPError as err:
+            _LOGGER.debug("Unable to get continuous heart rate for %s: %s", day, err)
+            return []
+        return heartrate.get("heart_rate_samples") or []
 
     def get_userdata(self, user_id, access_token):
         """Get user data."""
