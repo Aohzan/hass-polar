@@ -45,6 +45,20 @@ Existing entries are migrated automatically: the client ID and secret are moved 
 | `Last nightly recharge` | Nightly Recharge status, details as attributes |
 | `Heart rate variability` / `Breathing rate` | Averages measured during the last Nightly Recharge |
 | `Cardio load` | Last computed cardio load, with strain, tolerance and status as attributes |
+| `Last sync` | Diagnostic: last upload of data to Polar by a device (daily activity or exercise) |
+
+To be notified when the watch has not been synced for a while, use the `Last sync` sensor in an automation, for instance:
+
+```yaml
+triggers:
+  - trigger: template
+    value_template: >-
+      {{ now() - as_datetime(states('sensor.john_doe_last_sync')) > timedelta(hours=24) }}
+actions:
+  - action: notify.notify
+    data:
+      message: Polar has not been synced for 24 hours
+```
 
 Cardio load and continuous heart rate depend on the device and on the consents given in Polar Flow: when they are not available, their data is simply missing.
 

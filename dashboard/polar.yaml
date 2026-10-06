@@ -42,6 +42,10 @@ views:
             entity: sensor.john_doe_weight
             name: Weight
             color: blue-grey
+          - type: tile
+            entity: sensor.john_doe_last_sync
+            name: Last sync
+            color: grey
       - type: grid
         cards:
           - type: heading

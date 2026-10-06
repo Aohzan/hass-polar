@@ -38,8 +38,11 @@
     },
     "entity": {
         "sensor": {
-            "weight": {
-                "name": "Weight"
+            "breathing_rate": {
+                "name": "Breathing rate"
+            },
+            "cardio_load": {
+                "name": "Cardio load"
             },
             "daily_activity_calories": {
                 "name": "Daily activity Calories"
@@ -50,6 +53,12 @@
             "daily_activity_steps": {
                 "name": "Daily activity Steps"
             },
+            "deep_sleep": {
+                "name": "Deep sleep"
+            },
+            "heart_rate_variability": {
+                "name": "Heart rate variability"
+            },
             "last_exercise": {
                 "name": "Last exercise"
             },
@@ -59,11 +68,14 @@
             "last_exercise_heart_rate_maximum": {
                 "name": "Last exercise heart rate maximum"
             },
+            "last_recharge": {
+                "name": "Last nightly recharge"
+            },
             "last_sleep": {
                 "name": "Last sleep score"
             },
-            "deep_sleep": {
-                "name": "Deep sleep"
+            "last_sync": {
+                "name": "Last sync"
             },
             "light_sleep": {
                 "name": "Light sleep"
@@ -71,17 +83,8 @@
             "rem_sleep": {
                 "name": "REM sleep"
             },
-            "last_recharge": {
-                "name": "Last nightly recharge"
-            },
-            "heart_rate_variability": {
-                "name": "Heart rate variability"
-            },
-            "breathing_rate": {
-                "name": "Breathing rate"
-            },
-            "cardio_load": {
-                "name": "Cardio load"
+            "weight": {
+                "name": "Weight"
             }
         }
     },

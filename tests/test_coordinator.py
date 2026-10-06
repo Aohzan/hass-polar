@@ -1,6 +1,8 @@
 """Tests for the Polar coordinator helpers."""
 
-from custom_components.polar.coordinator import merge_daily_activities
+from datetime import UTC, datetime
+
+from custom_components.polar.coordinator import last_sync, merge_daily_activities
 
 
 def test_merge_daily_activities_keeps_latest_summary() -> None:
@@ -26,3 +28,14 @@ def test_merge_daily_activities_limits_history() -> None:
     assert len(merged) == 28
     assert merged[0]["date"] == "2026-09-30"
     assert merged[-1]["date"] == "2026-09-03"
+
+
+def test_last_sync() -> None:
+    """Test the most recent upload of daily activities and exercises is used."""
+    daily_activities = [{"created": "2026-10-05T08:00:00.000Z"}, {"date": "2026-10-04"}]
+    exercises = [{"upload_time": "2026-10-05T19:30:00.000Z"}, {"upload_time": None}]
+
+    assert last_sync(daily_activities, exercises) == datetime(
+        2026, 10, 5, 19, 30, tzinfo=UTC
+    )
+    assert last_sync([], []) is None

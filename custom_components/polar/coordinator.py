@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 from itertools import chain
 import json
@@ -23,6 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
     ATTR_CARDIO_LOAD_DATA,
@@ -33,8 +34,10 @@ from .const import (
     ATTR_LAST_EXERCISE,
     ATTR_LAST_RECHARGE,
     ATTR_LAST_SLEEP,
+    ATTR_LAST_SYNC,
     ATTR_RECHARGE_DATA,
     ATTR_SLEEP_DATA,
+    ATTR_SYNC_DATA,
     ATTR_USER_DATA,
     CONF_USER_ID,
     DEFAULT_SCAN_INTERVAL,
@@ -65,6 +68,21 @@ def merge_daily_activities(
     ):
         by_date[activity["date"]] = activity
     return [by_date[day] for day in sorted(by_date, reverse=True)][:DAILY_HISTORY_DAYS]
+
+
+def last_sync(
+    daily_activities: list[dict[str, Any]], exercises: list[dict[str, Any]]
+) -> datetime | None:
+    """Return when data was last uploaded to Polar by a device."""
+    timestamps = [
+        timestamp
+        for raw_timestamp in chain(
+            (activity.get("created") for activity in daily_activities),
+            (exercise.get("upload_time") for exercise in exercises),
+        )
+        if raw_timestamp and (timestamp := dt_util.parse_datetime(raw_timestamp))
+    ]
+    return max(timestamps, default=None)
 
 
 class PolarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -163,9 +181,14 @@ class PolarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             await self._daily_store.async_save(self._daily_activities)
 
+        sync_data = {}
+        if synced_at := last_sync(self._daily_activities, data[ATTR_EXERCISE_DATA]):
+            sync_data[ATTR_LAST_SYNC] = synced_at
+
         return {
             **data,
             ATTR_DAILY_DATA: self._daily_activities,
+            ATTR_SYNC_DATA: sync_data,
             ATTR_LAST_EXERCISE: next(iter(data[ATTR_EXERCISE_DATA]), {}),
             ATTR_LAST_SLEEP: next(iter(data[ATTR_SLEEP_DATA]), {}),
             ATTR_LAST_RECHARGE: next(iter(data[ATTR_RECHARGE_DATA]), {}),

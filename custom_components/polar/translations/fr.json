@@ -38,8 +38,11 @@
     },
     "entity": {
         "sensor": {
-            "weight": {
-                "name": "Poids"
+            "breathing_rate": {
+                "name": "Fréquence respiratoire"
+            },
+            "cardio_load": {
+                "name": "Charge cardio"
             },
             "daily_activity_calories": {
                 "name": "Calories de l'activité quotidienne"
@@ -50,6 +53,12 @@
             "daily_activity_steps": {
                 "name": "Pas de l'activité quotidienne"
             },
+            "deep_sleep": {
+                "name": "Sommeil profond"
+            },
+            "heart_rate_variability": {
+                "name": "Variabilité de la fréquence cardiaque"
+            },
             "last_exercise": {
                 "name": "Dernier entraînement"
             },
@@ -59,11 +68,14 @@
             "last_exercise_heart_rate_maximum": {
                 "name": "Fréquence cardiaque maximale du dernier entraînement"
             },
+            "last_recharge": {
+                "name": "Dernière Nightly Recharge"
+            },
             "last_sleep": {
                 "name": "Score du dernier sommeil"
             },
-            "deep_sleep": {
-                "name": "Sommeil profond"
+            "last_sync": {
+                "name": "Dernière synchronisation"
             },
             "light_sleep": {
                 "name": "Sommeil léger"
@@ -71,17 +83,8 @@
             "rem_sleep": {
                 "name": "Sommeil paradoxal"
             },
-            "last_recharge": {
-                "name": "Dernière Nightly Recharge"
-            },
-            "heart_rate_variability": {
-                "name": "Variabilité de la fréquence cardiaque"
-            },
-            "breathing_rate": {
-                "name": "Fréquence respiratoire"
-            },
-            "cardio_load": {
-                "name": "Charge cardio"
+            "weight": {
+                "name": "Poids"
             }
         }
     },

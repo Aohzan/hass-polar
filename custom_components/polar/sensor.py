@@ -15,7 +15,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfMass, UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfMass, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -29,6 +29,8 @@ from .const import (
     ATTR_LAST_EXERCISE,
     ATTR_LAST_RECHARGE,
     ATTR_LAST_SLEEP,
+    ATTR_LAST_SYNC,
+    ATTR_SYNC_DATA,
     ATTR_USER_DATA,
     ATTRIBUTION,
     DOMAIN,
@@ -67,6 +69,16 @@ def _exercise_start(exercise: dict[str, Any]) -> datetime | None:
 
 
 SENSOR_DESCRIPTIONS = (
+    # diagnostic
+    PolarEntityDescription(
+        key_category=ATTR_SYNC_DATA,
+        key=ATTR_LAST_SYNC,
+        translation_key="last_sync",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:sync",
+        attributes_keys=[],
+    ),
     # personal
     PolarEntityDescription(
         key_category=ATTR_USER_DATA,

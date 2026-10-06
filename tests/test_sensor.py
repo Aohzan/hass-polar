@@ -3,8 +3,9 @@
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT
+from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 
 @pytest.mark.parametrize(
@@ -25,6 +26,7 @@ from homeassistant.core import HomeAssistant
         ("sensor.john_doe_heart_rate_variability", "45", "ms"),
         ("sensor.john_doe_breathing_rate", "14.2", "br/min"),
         ("sensor.john_doe_cardio_load", "42.5", None),
+        ("sensor.john_doe_last_sync", "2026-10-05T20:00:00+00:00", None),
     ],
 )
 async def test_sensors(
@@ -60,3 +62,13 @@ async def test_sensor_unavailable_without_data(
     await hass.async_block_till_done()
 
     assert hass.states.get("sensor.john_doe_last_exercise").state == "unavailable"
+
+
+async def test_last_sync_diagnostic(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    entity_registry: er.EntityRegistry,
+) -> None:
+    """Test the last sync sensor is a diagnostic entity."""
+    entry = entity_registry.async_get("sensor.john_doe_last_sync")
+    assert entry.entity_category is EntityCategory.DIAGNOSTIC
