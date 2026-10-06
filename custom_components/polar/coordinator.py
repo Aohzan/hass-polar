@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from itertools import chain
 import json
@@ -75,7 +75,8 @@ def last_sync(
 ) -> datetime | None:
     """Return when data was last uploaded to Polar by a device."""
     timestamps = [
-        timestamp
+        # Polar timestamps are in UTC, but some are sent without time zone
+        timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
         for raw_timestamp in chain(
             (activity.get("created") for activity in daily_activities),
             (exercise.get("upload_time") for exercise in exercises),
