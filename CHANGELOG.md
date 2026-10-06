@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0](https://github.com/Aohzan/hass-polar/compare/1.5.0...2.0.0) (2026-10-06)
+
+### ⚠ BREAKING CHANGES
+
+* new account links (setup or reauthentication) require
+https://my.home-assistant.io/redirect/oauth as authorization callback URL in
+the Polar AccessLink client. The last exercise sensor is now a timestamp and
+the daily activity duration a numeric duration.
+
+* ci: install isodate for tests
+
+* feat: add last sync diagnostic sensor
+
+### Features
+
+* use Home Assistant OAuth2 flow and improve robustness ([#18](https://github.com/Aohzan/hass-polar/issues/18)) ([4e8bb1e](https://github.com/Aohzan/hass-polar/commit/4e8bb1e898dda5e3b3bf950aa6894ed51f029c40))
+
 ## [1.5.0](https://github.com/Aohzan/hass-polar/compare/1.4.1...1.5.0) (2026-10-06)
 
 ### Features
