@@ -39,3 +39,13 @@ def test_last_sync() -> None:
         2026, 10, 5, 19, 30, tzinfo=UTC
     )
     assert last_sync([], []) is None
+
+
+def test_last_sync_without_time_zone() -> None:
+    """Test timestamps sent without time zone are read as UTC."""
+    daily_activities = [{"created": "2026-10-05T20:00:00.000"}]
+    exercises = [{"upload_time": "2026-10-05T19:30:00.000Z"}]
+
+    assert last_sync(daily_activities, exercises) == datetime(
+        2026, 10, 5, 20, tzinfo=UTC
+    )
