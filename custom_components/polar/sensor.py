@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import logging
 from typing import Any
@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -21,6 +22,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PolarCoordinator
 from .const import (
+    ATTR_LAST_CARDIO_LOAD,
     ATTR_LAST_DAILY,
     ATTR_LAST_EXERCISE,
     ATTR_LAST_RECHARGE,
@@ -40,6 +42,7 @@ class PolarEntityDescription(SensorEntityDescription):
     key_category: str
     unique_id: str
     attributes_keys: list[str]
+    value_fn: Callable[[Any], Any] | None = None
 
 
 SENSOR_DESCRIPTIONS = (
@@ -101,6 +104,28 @@ SENSOR_DESCRIPTIONS = (
             "device",
         ],
     ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_EXERCISE,
+        key="heart_rate",
+        name="Last exercise heart rate average",
+        unique_id="last_exercise_heart_rate_average",
+        native_unit_of_measurement="bpm",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-pulse",
+        attributes_keys=["start_time"],
+        value_fn=lambda heart_rate: heart_rate.get("average"),
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_EXERCISE,
+        key="heart_rate",
+        name="Last exercise heart rate maximum",
+        unique_id="last_exercise_heart_rate_maximum",
+        native_unit_of_measurement="bpm",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-pulse",
+        attributes_keys=["start_time"],
+        value_fn=lambda heart_rate: heart_rate.get("maximum"),
+    ),
     # sleep
     PolarEntityDescription(
         key_category=ATTR_LAST_SLEEP,
@@ -108,6 +133,7 @@ SENSOR_DESCRIPTIONS = (
         name="Last sleep score",
         unique_id="last_sleep",
         native_unit_of_measurement="score",
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:sleep",
         attributes_keys=[
             "date",
@@ -131,6 +157,45 @@ SENSOR_DESCRIPTIONS = (
             "group_regeneration_score",
         ],
     ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_SLEEP,
+        key="deep_sleep",
+        name="Deep sleep",
+        unique_id="deep_sleep",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sleep",
+        attributes_keys=["date"],
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_SLEEP,
+        key="light_sleep",
+        name="Light sleep",
+        unique_id="light_sleep",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sleep",
+        attributes_keys=["date"],
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_SLEEP,
+        key="rem_sleep",
+        name="REM sleep",
+        unique_id="rem_sleep",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_unit_of_measurement=UnitOfTime.MINUTES,
+        suggested_display_precision=0,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:sleep",
+        attributes_keys=["date"],
+    ),
     # recharge
     PolarEntityDescription(
         key_category=ATTR_LAST_RECHARGE,
@@ -147,6 +212,45 @@ SENSOR_DESCRIPTIONS = (
             "breathing_rate_avg",
             "ans_charge",
             "ans_charge_status",
+        ],
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_RECHARGE,
+        key="heart_rate_variability_avg",
+        name="Heart rate variability",
+        unique_id="heart_rate_variability",
+        native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:heart-pulse",
+        attributes_keys=["date"],
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_LAST_RECHARGE,
+        key="breathing_rate_avg",
+        name="Breathing rate",
+        unique_id="breathing_rate",
+        native_unit_of_measurement="br/min",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        icon="mdi:lungs",
+        attributes_keys=["date"],
+    ),
+    # cardio load
+    PolarEntityDescription(
+        key_category=ATTR_LAST_CARDIO_LOAD,
+        key="cardio_load",
+        name="Cardio load",
+        unique_id="cardio_load",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        icon="mdi:heart-flash",
+        attributes_keys=[
+            "date",
+            "cardio_load_status",
+            "strain",
+            "tolerance",
+            "cardio_load_ratio",
+            "cardio_load_level",
         ],
     ),
 )
@@ -208,6 +312,8 @@ class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):
             ]
         ) is None:
             return None
+        if self.entity_description.value_fn is not None:
+            return self.entity_description.value_fn(value)
         return value
 
     @property
