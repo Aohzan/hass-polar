@@ -24,6 +24,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ATTR_EXERCISES,
+    ATTR_HISTORY_DATA,
     ATTR_LAST_CARDIO_LOAD,
     ATTR_LAST_DAILY,
     ATTR_LAST_EXERCISE,
@@ -49,6 +51,19 @@ class PolarEntityDescription(SensorEntityDescription):
     translation_key: str
     attributes_keys: list[str]
     value_fn: Callable[[dict[str, Any]], StateType | datetime] | None = None
+    attributes_fn: Callable[[dict[str, Any]], dict[str, Any]] | None = None
+
+
+EXERCISE_ATTRIBUTES = [
+    "distance",
+    "duration",
+    "heart_rate",
+    "training_load",
+    "sport",
+    "calories",
+    "running_index",
+    "device",
+]
 
 
 def _duration_seconds(raw_duration: str) -> float | None:
@@ -66,6 +81,15 @@ def _exercise_start(exercise: dict[str, Any]) -> datetime | None:
     if (offset := exercise.get("start_time_utc_offset")) is not None:
         return start.replace(tzinfo=timezone(timedelta(minutes=offset)))
     return start.replace(tzinfo=dt_util.get_default_time_zone())
+
+
+def _exercise_summary(exercise: dict[str, Any]) -> dict[str, Any]:
+    """Return the start time, with its time zone, and the main values of an exercise."""
+    start = _exercise_start(exercise)
+    return {
+        "start_time": start.isoformat() if start else None,
+        **{key: exercise[key] for key in EXERCISE_ATTRIBUTES if key in exercise},
+    }
 
 
 SENSOR_DESCRIPTIONS = (
@@ -131,17 +155,21 @@ SENSOR_DESCRIPTIONS = (
         translation_key="last_exercise",
         device_class=SensorDeviceClass.TIMESTAMP,
         icon="mdi:run",
-        attributes_keys=[
-            "distance",
-            "duration",
-            "heart_rate",
-            "training_load",
-            "sport",
-            "calories",
-            "running_index",
-            "device",
-        ],
+        attributes_keys=EXERCISE_ATTRIBUTES,
         value_fn=_exercise_start,
+    ),
+    PolarEntityDescription(
+        key_category=ATTR_HISTORY_DATA,
+        key=ATTR_EXERCISES,
+        translation_key="exercises",
+        icon="mdi:format-list-bulleted",
+        attributes_keys=[],
+        value_fn=lambda history: len(history[ATTR_EXERCISES]),
+        attributes_fn=lambda history: {
+            ATTR_EXERCISES: [
+                _exercise_summary(exercise) for exercise in history[ATTR_EXERCISES]
+            ]
+        },
     ),
     PolarEntityDescription(
         key_category=ATTR_LAST_EXERCISE,
@@ -303,6 +331,8 @@ class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):
     entity_description: PolarEntityDescription
     _attr_attribution = ATTRIBUTION
     _attr_has_entity_name = True
+    # The exercises list is large, and Polar already keeps it for 30 days
+    _unrecorded_attributes = frozenset({ATTR_EXERCISES})
 
     def __init__(
         self,
@@ -344,6 +374,8 @@ class PolarSensor(CoordinatorEntity[PolarCoordinator], SensorEntity):
     @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return attributes."""
+        if self.entity_description.attributes_fn is not None:
+            return self.entity_description.attributes_fn(self._record)
         if not self.entity_description.attributes_keys:
             return None
         return {

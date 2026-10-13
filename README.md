@@ -32,6 +32,8 @@ When Polar rejects the access token (for instance after revoking the access in P
 
 Existing entries are migrated automatically: the client ID and secret are moved to the application credentials, and the access token is kept, so there is nothing to do. Only a new link of the account (new entry or re-authentication) requires the callback URL above in the Polar AccessLink client.
 
+The `Last exercise` sensor is now a timestamp: before the upgrade, its history holds the local start time as text, so the last exercise before the upgrade appears twice, with the time zone offset between both values.
+
 ## Sensors
 
 | Sensor | Description |
@@ -40,6 +42,7 @@ Existing entries are migrated automatically: the client ID and secret are moved 
 | `Daily activity Calories` / `Duration` / `Steps` | Last daily activity summary, with its date as attribute |
 | `Last exercise` | Start time (timestamp) of the last exercise, details as attributes |
 | `Last exercise heart rate average` / `maximum` | Heart rate of the last exercise |
+| `Exercises` | Number of exercises of the last 30 days, listed most recent first in the `exercises` attribute |
 | `Last sleep score` | Sleep score of the last night, details as attributes |
 | `Deep sleep` / `Light sleep` / `REM sleep` | Sleep stage durations of the last night |
 | `Last nightly recharge` | Nightly Recharge status, details as attributes |
@@ -58,6 +61,17 @@ actions:
   - action: notify.notify
     data:
       message: Polar has not been synced for 24 hours
+```
+
+Each item of the `exercises` attribute has the same values as the `Last exercise` attributes, and its `start_time` with the time zone of the exercise. The attribute is not recorded in the history (Polar already keeps it), but it can be used in templates, for instance for the running distance of the last 7 days:
+
+```jinja
+{% set ns = namespace(distance=0) %}
+{% for exercise in state_attr('sensor.john_doe_exercises', 'exercises') or []
+   if exercise.sport == 'RUNNING' and as_datetime(exercise.start_time) > now() - timedelta(days=7) %}
+  {% set ns.distance = ns.distance + (exercise.distance or 0) %}
+{% endfor %}
+{{ (ns.distance / 1000) | round(1) }}
 ```
 
 Cardio load and continuous heart rate depend on the device and on the consents given in Polar Flow: when they are not available, their data is simply missing.
