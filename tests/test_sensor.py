@@ -1,11 +1,18 @@
 """Tests for the Polar sensors."""
 
+from datetime import timedelta
+
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.components.recorder.common import (
+    async_wait_recording_done,
+)
 
+from homeassistant.components.recorder.history import get_significant_states
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
 
 @pytest.mark.parametrize(
@@ -18,6 +25,7 @@ from homeassistant.helpers import entity_registry as er
         ("sensor.john_doe_last_exercise", "2026-10-05T16:00:00+00:00", None),
         ("sensor.john_doe_last_exercise_heart_rate_average", "140", "bpm"),
         ("sensor.john_doe_last_exercise_heart_rate_maximum", "175", "bpm"),
+        ("sensor.john_doe_exercises", "1", None),
         ("sensor.john_doe_last_sleep_score", "80", "score"),
         ("sensor.john_doe_deep_sleep", "60.0", "min"),
         ("sensor.john_doe_light_sleep", "240.0", "min"),
@@ -50,6 +58,39 @@ async def test_sensor_attributes(
     state = hass.states.get("sensor.john_doe_daily_activity_calories")
     assert state.attributes["date"] == "2026-10-05"
     assert state.attributes["active-calories"] == 800
+
+
+async def test_exercises(
+    hass: HomeAssistant, init_integration: MockConfigEntry
+) -> None:
+    """Test the exercises are listed with their start time including the time zone."""
+    state = hass.states.get("sensor.john_doe_exercises")
+    assert state.attributes["exercises"] == [
+        {
+            "start_time": "2026-10-05T18:00:00+02:00",
+            "duration": "1:00:00",
+            "heart_rate": {"average": 140, "maximum": 175},
+            "sport": "RUNNING",
+        }
+    ]
+
+
+async def test_exercises_not_recorded(
+    hass: HomeAssistant, init_integration: MockConfigEntry
+) -> None:
+    """Test the exercises list is not written to the recorder."""
+    await async_wait_recording_done(hass)
+
+    states = await hass.async_add_executor_job(
+        get_significant_states,
+        hass,
+        dt_util.utcnow() - timedelta(days=1),
+        None,
+        ["sensor.john_doe_exercises"],
+    )
+
+    assert states["sensor.john_doe_exercises"][0].state == "1"
+    assert "exercises" not in states["sensor.john_doe_exercises"][0].attributes
 
 
 async def test_sensor_unavailable_without_data(

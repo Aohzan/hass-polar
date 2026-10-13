@@ -56,6 +56,9 @@
       "deep_sleep": {
         "name": "Deep sleep"
       },
+      "exercises": {
+        "name": "Exercises"
+      },
       "heart_rate_variability": {
         "name": "Heart rate variability"
       },
