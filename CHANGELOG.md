@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0](https://github.com/Aohzan/hass-polar/compare/2.0.1...2.1.0) (2026-10-13)
+
+### Features
+
+* expose the exercises of the last 30 days ([c1e8f2a](https://github.com/Aohzan/hass-polar/commit/c1e8f2ac69396b94beff40116a8f0ba944e0ddff))
+
 ## [2.0.1](https://github.com/Aohzan/hass-polar/compare/2.0.0...2.0.1) (2026-10-06)
 
 ### Bug Fixes
