@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from aiohttp import ClientError, ClientResponseError
-import voluptuous as vol
+import probatio
 
 from homeassistant.config_entries import (
     SOURCE_REAUTH,
@@ -117,14 +117,16 @@ class OptionsFlowHandler(OptionsFlowWithReload):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        data_schema = vol.Schema(
+        data_schema = probatio.Schema(
             {
-                vol.Required(
+                probatio.Required(
                     CONF_SCAN_INTERVAL,
                     default=self.config_entry.options.get(
                         CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                     ),
-                ): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL)),
+                ): probatio.All(
+                    probatio.Coerce(int), probatio.Range(min=MIN_SCAN_INTERVAL)
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=data_schema)
