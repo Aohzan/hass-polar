@@ -1,7 +1,5 @@
 """Support for the polar sensors."""
 
-from __future__ import annotations
-
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -70,13 +68,13 @@ def _duration_seconds(raw_duration: str) -> float | None:
     """Convert a Polar ISO 8601 duration to seconds."""
     try:
         return isodate.parse_duration(raw_duration).total_seconds()
-    except (isodate.ISO8601Error, TypeError, ValueError):
+    except isodate.ISO8601Error, TypeError, ValueError:
         return None
 
 
 def _exercise_start(exercise: dict[str, Any]) -> datetime | None:
     """Return the start time of an exercise, in its own time zone."""
-    if (start := dt_util.parse_datetime(exercise["start_time"])) is None:
+    if (start := dt_util.parse_datetime(exercise.get("start_time") or "")) is None:
         return None
     if (offset := exercise.get("start_time_utc_offset")) is not None:
         return start.replace(tzinfo=timezone(timedelta(minutes=offset)))
@@ -100,7 +98,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="last_sync",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
-        icon="mdi:sync",
         attributes_keys=[],
     ),
     # personal
@@ -120,7 +117,6 @@ SENSOR_DESCRIPTIONS = (
         native_unit_of_measurement="kcal",
         translation_key="daily_activity_calories",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:walk",
         attributes_keys=[
             "date",
             "active-calories",
@@ -135,7 +131,6 @@ SENSOR_DESCRIPTIONS = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:clock-time-three",
         attributes_keys=["date"],
         value_fn=lambda daily: _duration_seconds(daily["duration"]),
     ),
@@ -145,7 +140,6 @@ SENSOR_DESCRIPTIONS = (
         native_unit_of_measurement="steps",
         translation_key="daily_activity_steps",
         state_class=SensorStateClass.TOTAL_INCREASING,
-        icon="mdi:shoe-print",
         attributes_keys=["date"],
     ),
     # exercise
@@ -154,7 +148,6 @@ SENSOR_DESCRIPTIONS = (
         key="start_time",
         translation_key="last_exercise",
         device_class=SensorDeviceClass.TIMESTAMP,
-        icon="mdi:run",
         attributes_keys=EXERCISE_ATTRIBUTES,
         value_fn=_exercise_start,
     ),
@@ -162,7 +155,6 @@ SENSOR_DESCRIPTIONS = (
         key_category=ATTR_HISTORY_DATA,
         key=ATTR_EXERCISES,
         translation_key="exercises",
-        icon="mdi:format-list-bulleted",
         attributes_keys=[],
         value_fn=lambda history: len(history[ATTR_EXERCISES]),
         attributes_fn=lambda history: {
@@ -177,7 +169,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="last_exercise_heart_rate_average",
         native_unit_of_measurement="bpm",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         attributes_keys=["start_time"],
         value_fn=lambda exercise: (exercise["heart_rate"] or {}).get("average"),
     ),
@@ -187,7 +178,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="last_exercise_heart_rate_maximum",
         native_unit_of_measurement="bpm",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         attributes_keys=["start_time"],
         value_fn=lambda exercise: (exercise["heart_rate"] or {}).get("maximum"),
     ),
@@ -198,7 +188,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="last_sleep",
         native_unit_of_measurement="score",
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         attributes_keys=[
             "date",
             "sleep_start_time",
@@ -230,7 +219,6 @@ SENSOR_DESCRIPTIONS = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         attributes_keys=["date"],
     ),
     PolarEntityDescription(
@@ -242,7 +230,6 @@ SENSOR_DESCRIPTIONS = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         attributes_keys=["date"],
     ),
     PolarEntityDescription(
@@ -254,7 +241,6 @@ SENSOR_DESCRIPTIONS = (
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:sleep",
         attributes_keys=["date"],
     ),
     # recharge
@@ -263,7 +249,6 @@ SENSOR_DESCRIPTIONS = (
         key="nightly_recharge_status",
         translation_key="last_recharge",
         native_unit_of_measurement="score",
-        icon="mdi:bed-clock",
         attributes_keys=[
             "date",
             "heart_rate_avg",
@@ -280,7 +265,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="heart_rate_variability",
         native_unit_of_measurement=UnitOfTime.MILLISECONDS,
         state_class=SensorStateClass.MEASUREMENT,
-        icon="mdi:heart-pulse",
         attributes_keys=["date"],
     ),
     PolarEntityDescription(
@@ -290,7 +274,6 @@ SENSOR_DESCRIPTIONS = (
         native_unit_of_measurement="br/min",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        icon="mdi:lungs",
         attributes_keys=["date"],
     ),
     # cardio load
@@ -300,7 +283,6 @@ SENSOR_DESCRIPTIONS = (
         translation_key="cardio_load",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=1,
-        icon="mdi:heart-flash",
         attributes_keys=[
             "date",
             "cardio_load_status",

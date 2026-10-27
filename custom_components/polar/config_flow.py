@@ -1,13 +1,11 @@
 """Config flow for Polar integration."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from http import HTTPStatus
 import logging
 from typing import Any
 
-from requests.exceptions import HTTPError, RequestException
+from aiohttp import ClientError, ClientResponseError
 import voluptuous as vol
 
 from homeassistant.config_entries import (
@@ -22,7 +20,8 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_TOKEN,
 )
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
 
 from .const import CONF_USER_ID, DEFAULT_SCAN_INTERVAL, DOMAIN, MIN_SCAN_INTERVAL
@@ -31,19 +30,18 @@ from .polaraccesslink.accesslink import AccessLink
 _LOGGER = logging.getLogger(__name__)
 
 
-def _register_user(user_id: int, access_token: str) -> dict[str, Any]:
+async def _async_register_user(
+    hass: HomeAssistant, user_id: int, access_token: str
+) -> dict[str, Any]:
     """Register the user to the Polar client and return its data."""
-    accesslink = AccessLink()
+    accesslink = AccessLink(async_get_clientsession(hass))
     try:
-        try:
-            accesslink.users.register(access_token)
-        except HTTPError as err:
-            # Conflict means the user is already registered for this client
-            if err.response.status_code != HTTPStatus.CONFLICT:
-                raise
-        return accesslink.get_userdata(user_id, access_token)
-    finally:
-        accesslink.close()
+        await accesslink.users.register(access_token)
+    except ClientResponseError as err:
+        # Conflict means the user is already registered for this client
+        if err.status != HTTPStatus.CONFLICT:
+            raise
+    return await accesslink.get_userdata(user_id, access_token)
 
 
 class ConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
@@ -81,11 +79,11 @@ class ConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
         try:
-            userdata = await self.hass.async_add_executor_job(
-                _register_user, user_id, data[CONF_TOKEN][CONF_ACCESS_TOKEN]
+            userdata = await _async_register_user(
+                self.hass, user_id, data[CONF_TOKEN][CONF_ACCESS_TOKEN]
             )
-        except RequestException as err:
-            _LOGGER.error("Unable to register the user to Polar: %s", err)
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.warning("Unable to register the user to Polar: %s", err)
             return self.async_abort(reason="cannot_connect")
 
         if self.source == SOURCE_REAUTH:

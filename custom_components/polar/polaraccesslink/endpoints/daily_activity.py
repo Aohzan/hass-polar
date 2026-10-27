@@ -7,9 +7,11 @@ from .resource import Resource
 class DailyActivity(Resource):
     """Access the daily activity data of the users."""
 
-    def create_transaction(self, user_id, access_token):
+    async def create_transaction(
+        self, user_id: int, access_token: str
+    ) -> DailyActivityTransaction | None:
         """Initiate daily activity transaction."""
-        response = self._post(
+        response = await self._post(
             endpoint=f"/users/{user_id}/activity-transactions",
             access_token=access_token,
         )

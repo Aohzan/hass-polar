@@ -1,7 +1,5 @@
 """Polar data coordinator."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from itertools import chain
@@ -10,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from requests.exceptions import HTTPError, RequestException
+from aiohttp import ClientError, ClientResponseError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -21,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -88,6 +87,12 @@ def last_sync(
     return max(timestamps, default=None)
 
 
+def retry_after(err: ClientResponseError) -> float | None:
+    """Return the delay in seconds before the next request, from Retry-After."""
+    value = (err.headers or {}).get("Retry-After", "")
+    return float(value) if value.isdecimal() else None
+
+
 class PolarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Data update coordinator."""
 
@@ -104,7 +109,7 @@ class PolarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 minutes=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
             ),
         )
-        self.accesslink = AccessLink()
+        self.accesslink = AccessLink(async_get_clientsession(hass))
         self._daily_store = daily_store(hass, entry.entry_id)
         self._daily_activities: list[dict[str, Any]] = []
 
@@ -149,34 +154,49 @@ class PolarCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return None
         return activities
 
-    def _fetch_data(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    async def _async_fetch_data(
+        self,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Fetch the data from Polar, and the daily activities synced since last call."""
         user_id = self.config_entry.data[CONF_USER_ID]
+        access_token = self.access_token
         data = {
-            ATTR_USER_DATA: self.accesslink.get_userdata(user_id, self.access_token),
-            ATTR_EXERCISE_DATA: self.accesslink.get_exercises(self.access_token),
-            ATTR_SLEEP_DATA: self.accesslink.get_sleep(self.access_token),
-            ATTR_RECHARGE_DATA: self.accesslink.get_recharge(self.access_token),
-            ATTR_CARDIO_LOAD_DATA: self.accesslink.get_cardio_load(self.access_token),
+            ATTR_USER_DATA: await self.accesslink.get_userdata(user_id, access_token),
+            ATTR_EXERCISE_DATA: await self.accesslink.get_exercises(access_token),
+            ATTR_SLEEP_DATA: await self.accesslink.get_sleep(access_token),
+            ATTR_RECHARGE_DATA: await self.accesslink.get_recharge(access_token),
+            ATTR_CARDIO_LOAD_DATA: await self.accesslink.get_cardio_load(access_token),
         }
         # Fetched last: the daily activities are consumed once fetched, so they
         # would be lost if a following request failed.
-        return data, self.accesslink.get_daily_activities(user_id, self.access_token)
+        return data, await self.accesslink.get_daily_activities(user_id, access_token)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch the latest data from the source."""
         try:
-            data, new_activities = await self.hass.async_add_executor_job(
-                self._fetch_data
-            )
-        except HTTPError as err:
-            if err.response.status_code == HTTPStatus.UNAUTHORIZED:
+            data, new_activities = await self._async_fetch_data()
+        except ClientResponseError as err:
+            if err.status == HTTPStatus.UNAUTHORIZED:
                 raise ConfigEntryAuthFailed(
-                    f"Polar rejected the access token: {err}"
+                    translation_domain=DOMAIN, translation_key="invalid_auth"
                 ) from err
-            raise UpdateFailed(f"Error fetching Polar data: {err}") from err
-        except RequestException as err:
-            raise UpdateFailed(f"Unable to connect to Polar: {err}") from err
+            if err.status == HTTPStatus.TOO_MANY_REQUESTS:
+                raise UpdateFailed(
+                    translation_domain=DOMAIN,
+                    translation_key="rate_limited",
+                    retry_after=retry_after(err),
+                ) from err
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="cannot_connect",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        except (ClientError, TimeoutError) as err:
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="cannot_connect",
+                translation_placeholders={"error": str(err) or type(err).__name__},
+            ) from err
 
         if new_activities:
             self._daily_activities = merge_daily_activities(

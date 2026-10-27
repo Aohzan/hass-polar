@@ -1,20 +1,13 @@
 {
   "domain": "polar",
   "name": "Polar",
-  "codeowners": [
-    "@Aohzan"
-  ],
+  "codeowners": ["@Aohzan"],
   "config_flow": true,
-  "dependencies": [
-    "application_credentials",
-    "recorder"
-  ],
+  "dependencies": ["application_credentials", "recorder"],
   "documentation": "https://github.com/Aohzan/hass-polar",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Aohzan/hass-polar/issues",
-  "requirements": [
-    "isodate==0.7.2"
-  ],
+  "requirements": ["isodate==0.7.2"],
   "version": "2.1.0"
 }
