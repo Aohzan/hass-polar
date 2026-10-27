@@ -59,7 +59,6 @@ class PolarOAuth2Implementation(AuthImplementation):
                     body = ""
                 _LOGGER.error("Polar token request failed (%s): %s", resp.status, body)
             resp.raise_for_status()
-            return cast(dict[str, Any], await resp.json())
         except ClientResponseError as err:
             kwargs: dict[str, Any] = {
                 "request_info": err.request_info,
@@ -77,6 +76,13 @@ class PolarOAuth2Implementation(AuthImplementation):
             # Rejected request: invalid client credentials, code or token
             raise OAuth2TokenRequestReauthError(**kwargs) from err
         except ClientError as err:
+            raise OAuth2TokenRequestConnectionError(domain=self.service_domain) from err
+
+        try:
+            return cast(dict[str, Any], await resp.json())
+        except (ClientError, ValueError) as err:
+            # Accepted request with an unusable response: not an auth failure
+            _LOGGER.warning("Invalid Polar token response: %s", err)
             raise OAuth2TokenRequestConnectionError(domain=self.service_domain) from err
 
 

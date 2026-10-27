@@ -182,7 +182,9 @@ async def test_flow_cannot_connect(
     ("mock_kwargs", "reason"),
     [
         ({"status": HTTPStatus.UNAUTHORIZED}, "oauth_unauthorized"),
+        ({"status": HTTPStatus.TOO_MANY_REQUESTS}, "oauth_failed"),
         ({"status": HTTPStatus.SERVICE_UNAVAILABLE}, "oauth_failed"),
+        ({"text": "<html>maintenance</html>"}, "oauth_failed"),
         ({"exc": ClientConnectionError()}, "oauth_failed"),
     ],
 )
