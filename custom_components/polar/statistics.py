@@ -276,13 +276,15 @@ class PolarStatisticsImporter:
                         self.coordinator.access_token, day.isoformat()
                     )
                 except (ClientError, TimeoutError) as err:
+                    # The days fetched are imported, the next run resumes at
+                    # the day that failed.
                     _LOGGER.warning("Unable to import continuous heart rate: %s", err)
-                    return
+                    break
                 day += timedelta(days=1)
 
             # Polar keeps adding samples to a day after its first sync, so the
             # previous day is fetched again on the next run.
-            self._heart_rate_next_day = today - timedelta(days=1)
+            self._heart_rate_next_day = min(day, today - timedelta(days=1))
             self._import(
                 "heart_rate",
                 "Heart rate",

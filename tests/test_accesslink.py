@@ -146,20 +146,41 @@ async def test_daily_records(
     ] == ["2026-10-04", "2026-10-03"]
 
 
+@pytest.mark.parametrize("status", [HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND])
 async def test_optional_data_unavailable(
-    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker
+    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker, status: HTTPStatus
 ) -> None:
     """Test data depending on the device or consents is empty when unavailable."""
+    aioclient_mock.get(f"{ACCESSLINK_URL}/users/cardio-load", status=status)
     aioclient_mock.get(
-        f"{ACCESSLINK_URL}/users/cardio-load", status=HTTPStatus.FORBIDDEN
-    )
-    aioclient_mock.get(
-        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05",
-        status=HTTPStatus.NOT_FOUND,
+        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05", status=status
     )
 
     assert await accesslink.get_cardio_load(ACCESS_TOKEN) == []
     assert await accesslink.get_continuous_heart_rate(ACCESS_TOKEN, "2026-10-05") == []
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        HTTPStatus.UNAUTHORIZED,
+        HTTPStatus.TOO_MANY_REQUESTS,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+    ],
+)
+async def test_optional_data_error(
+    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker, status: HTTPStatus
+) -> None:
+    """Test the other errors on optional data are raised."""
+    aioclient_mock.get(f"{ACCESSLINK_URL}/users/cardio-load", status=status)
+    aioclient_mock.get(
+        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05", status=status
+    )
+
+    with pytest.raises(ClientResponseError):
+        await accesslink.get_cardio_load(ACCESS_TOKEN)
+    with pytest.raises(ClientResponseError):
+        await accesslink.get_continuous_heart_rate(ACCESS_TOKEN, "2026-10-05")
 
 
 async def test_continuous_heart_rate(
