@@ -5,8 +5,12 @@ from copy import deepcopy
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from aiohttp import ClientResponseError
+from multidict import CIMultiDict
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
+from syrupy.assertion import SnapshotAssertion
 
 from custom_components.polar.const import CONF_USER_ID, DOMAIN
 from homeassistant.components.application_credentials import (
@@ -83,6 +87,21 @@ DAILY_ACTIVITIES = [
 ]
 
 
+def http_error(
+    status: int, headers: dict[str, str] | None = None
+) -> ClientResponseError:
+    """Return the error raised by the Polar client for an HTTP status."""
+    return ClientResponseError(
+        MagicMock(), (), status=status, headers=CIMultiDict(headers or {})
+    )
+
+
+@pytest.fixture
+def snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
+    """Return the snapshot assertion with the Home Assistant serializer."""
+    return snapshot.use_extension(HomeAssistantSnapshotExtension)
+
+
 @pytest.fixture(autouse=True)
 def auto_enable(recorder_mock: Any, enable_custom_integrations: None) -> None:
     """Enable the recorder and the custom integrations."""
@@ -102,6 +121,8 @@ def config_entry() -> MockConfigEntry:
     """Return a Polar config entry."""
     return MockConfigEntry(
         domain=DOMAIN,
+        # Fixed, as the unique IDs of the sensors contain it
+        entry_id="01JPOLARENTRY0000000000000",
         version=2,
         unique_id=str(USER_ID),
         title="John Doe",
@@ -138,7 +159,10 @@ def mock_accesslink() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
+    hass: HomeAssistant,
+    setup_credentials: None,
+    config_entry: MockConfigEntry,
+    mock_accesslink: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Polar integration."""
     config_entry.add_to_hass(hass)

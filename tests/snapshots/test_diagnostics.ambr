@@ -1,0 +1,126 @@
+# serializer version: 1
+# name: test_diagnostics
+  dict({
+    'data': dict({
+      'cardioloaddata': list([
+        dict({
+          'cardio_load': 42.5,
+          'cardio_load_status': 'LOAD_STATUS_OK',
+          'date': '2026-10-05',
+        }),
+      ]),
+      'dailydata': list([
+        dict({
+          'active-calories': 800,
+          'active-steps': 12000,
+          'calories': 2100,
+          'created': '2026-10-05T20:00:00.000Z',
+          'date': '2026-10-05',
+          'duration': 'PT5H30M',
+        }),
+      ]),
+      'exercisedata': list([
+        dict({
+          'duration': '1:00:00',
+          'heart_rate': dict({
+            'average': 140,
+            'maximum': 175,
+          }),
+          'sport': 'RUNNING',
+          'start_time': '2026-10-05T18:00:00',
+          'start_time_utc_offset': 120,
+          'upload_time': '2026-10-05T19:30:00.000Z',
+        }),
+      ]),
+      'historydata': dict({
+        'exercises': list([
+          dict({
+            'duration': '1:00:00',
+            'heart_rate': dict({
+              'average': 140,
+              'maximum': 175,
+            }),
+            'sport': 'RUNNING',
+            'start_time': '2026-10-05T18:00:00',
+            'start_time_utc_offset': 120,
+            'upload_time': '2026-10-05T19:30:00.000Z',
+          }),
+        ]),
+      }),
+      'last_cardio_load': dict({
+        'cardio_load': 42.5,
+        'cardio_load_status': 'LOAD_STATUS_OK',
+        'date': '2026-10-05',
+      }),
+      'last_daily': dict({
+        'active-calories': 800,
+        'active-steps': 12000,
+        'calories': 2100,
+        'created': '2026-10-05T20:00:00.000Z',
+        'date': '2026-10-05',
+        'duration': 'PT5H30M',
+      }),
+      'last_exercise': dict({
+        'duration': '1:00:00',
+        'heart_rate': dict({
+          'average': 140,
+          'maximum': 175,
+        }),
+        'sport': 'RUNNING',
+        'start_time': '2026-10-05T18:00:00',
+        'start_time_utc_offset': 120,
+        'upload_time': '2026-10-05T19:30:00.000Z',
+      }),
+      'last_recharge': dict({
+        'breathing_rate_avg': 14.2,
+        'date': '2026-10-05',
+        'heart_rate_variability_avg': 45,
+        'nightly_recharge_status': 4,
+      }),
+      'last_sleep': dict({
+        'date': '2026-10-05',
+        'deep_sleep': 3600,
+        'light_sleep': 14400,
+        'rem_sleep': 5400,
+        'sleep_score': 80,
+      }),
+      'rechargedata': list([
+        dict({
+          'breathing_rate_avg': 14.2,
+          'date': '2026-10-05',
+          'heart_rate_variability_avg': 45,
+          'nightly_recharge_status': 4,
+        }),
+      ]),
+      'sleepdata': list([
+        dict({
+          'date': '2026-10-05',
+          'deep_sleep': 3600,
+          'light_sleep': 14400,
+          'rem_sleep': 5400,
+          'sleep_score': 80,
+        }),
+      ]),
+      'syncdata': dict({
+        'last_sync': '2026-10-05T20:00:00+00:00',
+      }),
+      'userdata': dict({
+        'first-name': '**REDACTED**',
+        'last-name': '**REDACTED**',
+        'polar-user-id': '**REDACTED**',
+        'weight': 70.5,
+      }),
+    }),
+    'entry': dict({
+      'data': dict({
+        'auth_implementation': '**REDACTED**',
+        'name': '**REDACTED**',
+        'token': '**REDACTED**',
+        'user_id': '**REDACTED**',
+      }),
+      'options': dict({
+        'scan_interval': 30,
+      }),
+    }),
+  })
+# ---
