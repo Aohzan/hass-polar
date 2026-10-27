@@ -31,11 +31,18 @@ CLIENT_SECRET = "client-secret"
 USER_ID = 123456
 ACCESS_TOKEN = "access-token"
 
+USER_URL = f"https://www.polaraccesslink.com/v3/users/{USER_ID}"
+
 USER_DATA = {
     "polar-user-id": USER_ID,
+    "member-id": "member",
+    "registration-date": "2020-01-01T10:00:00.000Z",
     "first-name": "John",
     "last-name": "Doe",
+    "birthdate": "1990-01-01",
+    "gender": "MALE",
     "weight": 70.5,
+    "height": 180,
 }
 EXERCISES = [
     {
@@ -45,6 +52,7 @@ EXERCISES = [
         "heart_rate": {"average": 140, "maximum": 175},
         "sport": "RUNNING",
         "upload_time": "2026-10-05T19:30:00.000Z",
+        "polar_user": USER_URL,
     }
 ]
 SLEEP = [
@@ -54,6 +62,7 @@ SLEEP = [
         "deep_sleep": 3600,
         "light_sleep": 14400,
         "rem_sleep": 5400,
+        "polar_user": USER_URL,
     }
 ]
 RECHARGE = [
@@ -62,6 +71,7 @@ RECHARGE = [
         "nightly_recharge_status": 4,
         "heart_rate_variability_avg": 45,
         "breathing_rate_avg": 14.2,
+        "polar_user": USER_URL,
     }
 ]
 CARDIO_LOAD = [
@@ -75,6 +85,7 @@ DAILY_ACTIVITIES = [
         "active-calories": 800,
         "duration": "PT5H30M",
         "active-steps": 12000,
+        "polar-user": USER_URL,
     },
     {
         "date": "2026-10-05",
@@ -83,6 +94,7 @@ DAILY_ACTIVITIES = [
         "active-calories": 300,
         "duration": "PT2H",
         "active-steps": 5000,
+        "polar-user": USER_URL,
     },
 ]
 

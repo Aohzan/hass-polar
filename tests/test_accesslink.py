@@ -1,6 +1,7 @@
 """Tests for the Polar AccessLink client."""
 
 from http import HTTPStatus
+from typing import Any
 
 from aiohttp import ClientResponseError
 import pytest
@@ -145,20 +146,41 @@ async def test_daily_records(
     ] == ["2026-10-04", "2026-10-03"]
 
 
+@pytest.mark.parametrize("status", [HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND])
 async def test_optional_data_unavailable(
-    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker
+    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker, status: HTTPStatus
 ) -> None:
     """Test data depending on the device or consents is empty when unavailable."""
+    aioclient_mock.get(f"{ACCESSLINK_URL}/users/cardio-load", status=status)
     aioclient_mock.get(
-        f"{ACCESSLINK_URL}/users/cardio-load", status=HTTPStatus.FORBIDDEN
-    )
-    aioclient_mock.get(
-        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05",
-        status=HTTPStatus.NOT_FOUND,
+        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05", status=status
     )
 
     assert await accesslink.get_cardio_load(ACCESS_TOKEN) == []
     assert await accesslink.get_continuous_heart_rate(ACCESS_TOKEN, "2026-10-05") == []
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        HTTPStatus.UNAUTHORIZED,
+        HTTPStatus.TOO_MANY_REQUESTS,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
+    ],
+)
+async def test_optional_data_error(
+    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker, status: HTTPStatus
+) -> None:
+    """Test the other errors on optional data are raised."""
+    aioclient_mock.get(f"{ACCESSLINK_URL}/users/cardio-load", status=status)
+    aioclient_mock.get(
+        f"{ACCESSLINK_URL}/users/continuous-heart-rate/2026-10-05", status=status
+    )
+
+    with pytest.raises(ClientResponseError):
+        await accesslink.get_cardio_load(ACCESS_TOKEN)
+    with pytest.raises(ClientResponseError):
+        await accesslink.get_continuous_heart_rate(ACCESS_TOKEN, "2026-10-05")
 
 
 async def test_continuous_heart_rate(
@@ -200,6 +222,54 @@ async def test_daily_activities(
         "get",
         "get",
         "put",
+    ]
+
+
+async def test_daily_activities_read_failure(
+    accesslink: AccessLink, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Test the transaction is not committed when an activity can't be read."""
+    aioclient_mock.post(
+        f"{ACCESSLINK_URL}/users/{USER_ID}/activity-transactions",
+        status=HTTPStatus.CREATED,
+        json={"resource-uri": TRANSACTION_URL},
+    )
+    aioclient_mock.get(
+        TRANSACTION_URL, json={"activity-log": [f"{TRANSACTION_URL}/activities/1"]}
+    )
+    aioclient_mock.get(
+        f"{TRANSACTION_URL}/activities/1", status=HTTPStatus.INTERNAL_SERVER_ERROR
+    )
+
+    with pytest.raises(ClientResponseError):
+        await accesslink.get_daily_activities(USER_ID, ACCESS_TOKEN)
+
+    assert "put" not in [method for method, *_ in aioclient_mock.mock_calls]
+
+
+@pytest.mark.parametrize(
+    "mock_kwargs",
+    [{"status": HTTPStatus.INTERNAL_SERVER_ERROR}, {"exc": TimeoutError()}],
+)
+async def test_daily_activities_commit_failure(
+    accesslink: AccessLink,
+    aioclient_mock: AiohttpClientMocker,
+    mock_kwargs: dict[str, Any],
+) -> None:
+    """Test the activities read are returned when the commit fails."""
+    aioclient_mock.post(
+        f"{ACCESSLINK_URL}/users/{USER_ID}/activity-transactions",
+        status=HTTPStatus.CREATED,
+        json={"resource-uri": TRANSACTION_URL},
+    )
+    aioclient_mock.get(
+        TRANSACTION_URL, json={"activity-log": [f"{TRANSACTION_URL}/activities/1"]}
+    )
+    aioclient_mock.get(f"{TRANSACTION_URL}/activities/1", json={"date": "2026-10-05"})
+    aioclient_mock.put(TRANSACTION_URL, **mock_kwargs)
+
+    assert await accesslink.get_daily_activities(USER_ID, ACCESS_TOKEN) == [
+        {"date": "2026-10-05"}
     ]
 
 

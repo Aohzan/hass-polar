@@ -1,10 +1,11 @@
 """Accesslink library."""
 
 from datetime import UTC, datetime, timedelta, timezone
+from http import HTTPStatus
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientResponseError, ClientSession
 import isodate
 
 from homeassistant.util import dt as dt_util
@@ -41,6 +42,11 @@ def exercise_start_utc(exercise: dict[str, Any]) -> datetime | None:
         offset = exercise.get("start_time_utc_offset") or 0
         start = start.replace(tzinfo=timezone(timedelta(minutes=offset)))
     return dt_util.as_utc(start)
+
+
+# Statuses Polar answers when the data is not available for the user
+# (unsupported device or missing consents) or for the day asked
+UNAVAILABLE_STATUSES = {HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND}
 
 
 def _by_date(record: dict[str, Any]) -> str:
@@ -98,7 +104,9 @@ class AccessLink:
                 endpoint="/users/cardio-load", access_token=access_token
             )
         except ClientResponseError as err:
-            _LOGGER.debug("Unable to get cardio load: %s", err)
+            if err.status not in UNAVAILABLE_STATUSES:
+                raise
+            _LOGGER.debug("Cardio load not available: %s", err)
             return []
         return sorted(
             (
@@ -124,7 +132,9 @@ class AccessLink:
                 access_token=access_token,
             )
         except ClientResponseError as err:
-            _LOGGER.debug("Unable to get continuous heart rate for %s: %s", day, err)
+            if err.status not in UNAVAILABLE_STATUSES:
+                raise
+            _LOGGER.debug("Continuous heart rate not available for %s: %s", day, err)
             return []
         return heartrate.get("heart_rate_samples") or []
 
@@ -138,7 +148,9 @@ class AccessLink:
         """Get the daily activity summaries synced since the last call.
 
         Polar only returns the summaries that were not committed yet, and may
-        return several summaries for the same day (one per sync).
+        return several summaries for the same day (one per sync). The summaries
+        read are returned even when the commit fails: Polar may have received
+        it, and otherwise returns them again in the next transaction.
         """
         transaction = await self.daily_activity.create_transaction(
             user_id=user_id, access_token=access_token
@@ -151,6 +163,9 @@ class AccessLink:
             await transaction.get_activity_summary(url)
             for url in (await transaction.list_activities())["activity-log"]
         ]
-        await transaction.commit()
+        try:
+            await transaction.commit()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.warning("Unable to commit the daily activity transaction: %s", err)
         _LOGGER.debug("Got %s new daily activities", len(activities))
         return activities

@@ -5,7 +5,7 @@ from http import HTTPStatus
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from aiohttp import ClientConnectionError
 from freezegun.api import FrozenDateTimeFactory
@@ -26,6 +26,9 @@ from homeassistant.const import (
     CONF_TOKEN,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.config_entry_oauth2_flow import (
+    ImplementationUnavailableError,
+)
 
 from .conftest import (
     ACCESS_TOKEN,
@@ -183,6 +186,25 @@ async def test_setup_without_credentials(
     assert [
         flow["context"]["source"] for flow in hass.config_entries.flow.async_progress()
     ] == [SOURCE_REAUTH]
+    mock_accesslink.get_userdata.assert_not_called()
+
+
+@pytest.mark.usefixtures("setup_credentials")
+async def test_setup_implementation_unavailable(
+    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
+) -> None:
+    """Test the setup is retried when the OAuth2 implementation is unavailable."""
+    config_entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.polar.async_get_config_entry_implementation",
+        side_effect=ImplementationUnavailableError,
+    ):
+        await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert not hass.config_entries.flow.async_progress()
     mock_accesslink.get_userdata.assert_not_called()
 
 
