@@ -1,6 +1,7 @@
 {
   "domain": "polar",
   "name": "Polar",
+  "categories": ["health_wellbeing"],
   "codeowners": ["@Aohzan"],
   "config_flow": true,
   "dependencies": ["application_credentials", "recorder"],
