@@ -1,0 +1,54 @@
+{
+  "entity": {
+    "sensor": {
+      "breathing_rate": {
+        "default": "mdi:lungs"
+      },
+      "cardio_load": {
+        "default": "mdi:heart-flash"
+      },
+      "daily_activity_calories": {
+        "default": "mdi:walk"
+      },
+      "daily_activity_duration": {
+        "default": "mdi:clock-time-three"
+      },
+      "daily_activity_steps": {
+        "default": "mdi:shoe-print"
+      },
+      "deep_sleep": {
+        "default": "mdi:sleep"
+      },
+      "exercises": {
+        "default": "mdi:format-list-bulleted"
+      },
+      "heart_rate_variability": {
+        "default": "mdi:heart-pulse"
+      },
+      "last_exercise": {
+        "default": "mdi:run"
+      },
+      "last_exercise_heart_rate_average": {
+        "default": "mdi:heart-pulse"
+      },
+      "last_exercise_heart_rate_maximum": {
+        "default": "mdi:heart-pulse"
+      },
+      "last_recharge": {
+        "default": "mdi:bed-clock"
+      },
+      "last_sleep": {
+        "default": "mdi:sleep"
+      },
+      "last_sync": {
+        "default": "mdi:sync"
+      },
+      "light_sleep": {
+        "default": "mdi:sleep"
+      },
+      "rem_sleep": {
+        "default": "mdi:sleep"
+      }
+    }
+  }
+}

@@ -5,8 +5,12 @@ from copy import deepcopy
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from aiohttp import ClientResponseError
+from multidict import CIMultiDict
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
+from syrupy.assertion import SnapshotAssertion
 
 from custom_components.polar.const import CONF_USER_ID, DOMAIN
 from homeassistant.components.application_credentials import (
@@ -27,11 +31,18 @@ CLIENT_SECRET = "client-secret"
 USER_ID = 123456
 ACCESS_TOKEN = "access-token"
 
+USER_URL = f"https://www.polaraccesslink.com/v3/users/{USER_ID}"
+
 USER_DATA = {
     "polar-user-id": USER_ID,
+    "member-id": "member",
+    "registration-date": "2020-01-01T10:00:00.000Z",
     "first-name": "John",
     "last-name": "Doe",
+    "birthdate": "1990-01-01",
+    "gender": "MALE",
     "weight": 70.5,
+    "height": 180,
 }
 EXERCISES = [
     {
@@ -41,6 +52,7 @@ EXERCISES = [
         "heart_rate": {"average": 140, "maximum": 175},
         "sport": "RUNNING",
         "upload_time": "2026-10-05T19:30:00.000Z",
+        "polar_user": USER_URL,
     }
 ]
 SLEEP = [
@@ -50,6 +62,7 @@ SLEEP = [
         "deep_sleep": 3600,
         "light_sleep": 14400,
         "rem_sleep": 5400,
+        "polar_user": USER_URL,
     }
 ]
 RECHARGE = [
@@ -58,6 +71,7 @@ RECHARGE = [
         "nightly_recharge_status": 4,
         "heart_rate_variability_avg": 45,
         "breathing_rate_avg": 14.2,
+        "polar_user": USER_URL,
     }
 ]
 CARDIO_LOAD = [
@@ -71,6 +85,7 @@ DAILY_ACTIVITIES = [
         "active-calories": 800,
         "duration": "PT5H30M",
         "active-steps": 12000,
+        "polar-user": USER_URL,
     },
     {
         "date": "2026-10-05",
@@ -79,8 +94,24 @@ DAILY_ACTIVITIES = [
         "active-calories": 300,
         "duration": "PT2H",
         "active-steps": 5000,
+        "polar-user": USER_URL,
     },
 ]
+
+
+def http_error(
+    status: int, headers: dict[str, str] | None = None
+) -> ClientResponseError:
+    """Return the error raised by the Polar client for an HTTP status."""
+    return ClientResponseError(
+        MagicMock(), (), status=status, headers=CIMultiDict(headers or {})
+    )
+
+
+@pytest.fixture
+def snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
+    """Return the snapshot assertion with the Home Assistant serializer."""
+    return snapshot.use_extension(HomeAssistantSnapshotExtension)
 
 
 @pytest.fixture(autouse=True)
@@ -102,6 +133,8 @@ def config_entry() -> MockConfigEntry:
     """Return a Polar config entry."""
     return MockConfigEntry(
         domain=DOMAIN,
+        # Fixed, as the unique IDs of the sensors contain it
+        entry_id="01JPOLARENTRY0000000000000",
         version=2,
         unique_id=str(USER_ID),
         title="John Doe",
@@ -138,7 +171,10 @@ def mock_accesslink() -> Generator[MagicMock]:
 
 @pytest.fixture
 async def init_integration(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
+    hass: HomeAssistant,
+    setup_credentials: None,
+    config_entry: MockConfigEntry,
+    mock_accesslink: MagicMock,
 ) -> MockConfigEntry:
     """Set up the Polar integration."""
     config_entry.add_to_hass(hass)

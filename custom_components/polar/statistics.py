@@ -10,8 +10,6 @@ statistics would collide with the rows compiled by the recorder from their
 state and break the statistics compilation.
 """
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -19,7 +17,7 @@ from datetime import date, datetime, time, timedelta
 import logging
 from typing import Any
 
-from requests.exceptions import RequestException
+from aiohttp import ClientError
 
 from homeassistant.components.recorder import get_instance
 from homeassistant.components.recorder.models import (
@@ -269,23 +267,24 @@ class PolarStatisticsImporter:
             if first_day is None:
                 first_day = await self._async_first_heart_rate_day(today)
 
+            accesslink = self.coordinator.accesslink
             samples_by_day: dict[date, list[dict[str, Any]]] = {}
             day = first_day
             while day <= today:
                 try:
-                    samples_by_day[day] = await self.hass.async_add_executor_job(
-                        self.coordinator.accesslink.get_continuous_heart_rate,
-                        self.coordinator.access_token,
-                        day.isoformat(),
+                    samples_by_day[day] = await accesslink.get_continuous_heart_rate(
+                        self.coordinator.access_token, day.isoformat()
                     )
-                except RequestException as err:
+                except (ClientError, TimeoutError) as err:
+                    # The days fetched are imported, the next run resumes at
+                    # the day that failed.
                     _LOGGER.warning("Unable to import continuous heart rate: %s", err)
-                    return
+                    break
                 day += timedelta(days=1)
 
             # Polar keeps adding samples to a day after its first sync, so the
             # previous day is fetched again on the next run.
-            self._heart_rate_next_day = today - timedelta(days=1)
+            self._heart_rate_next_day = min(day, today - timedelta(days=1))
             self._import(
                 "heart_rate",
                 "Heart rate",

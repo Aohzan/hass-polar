@@ -1,10 +1,14 @@
 """Accesslink library."""
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
+from http import HTTPStatus
 import logging
+from typing import Any
 
+from aiohttp import ClientError, ClientResponseError, ClientSession
 import isodate
-from requests.exceptions import HTTPError
+
+from homeassistant.util import dt as dt_util
 
 from .endpoints.daily_activity import DailyActivity
 from .endpoints.users import Users
@@ -18,69 +22,91 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def format_duration(raw_duration: str) -> str:
-    """Format a Polar ISO 8601 duration as H:MM:SS."""
-    return str(isodate.parse_duration(raw_duration))
+    """Format a Polar ISO 8601 duration as H:MM:SS, unchanged when invalid."""
+    try:
+        return str(isodate.parse_duration(raw_duration))
+    except isodate.ISO8601Error, TypeError, ValueError:
+        return raw_duration
+
+
+def exercise_start_utc(exercise: dict[str, Any]) -> datetime | None:
+    """Return the start time of an exercise in UTC, None when invalid.
+
+    Polar sends the local start time without time zone, and its offset to UTC
+    in minutes apart. Without offset, the start time is read as UTC.
+    """
+    start = dt_util.parse_datetime(exercise.get("start_time") or "")
+    if start is None:
+        return None
+    if start.tzinfo is None:
+        offset = exercise.get("start_time_utc_offset") or 0
+        start = start.replace(tzinfo=timezone(timedelta(minutes=offset)))
+    return dt_util.as_utc(start)
+
+
+# Statuses Polar answers when the data is not available for the user
+# (unsupported device or missing consents) or for the day asked
+UNAVAILABLE_STATUSES = {HTTPStatus.FORBIDDEN, HTTPStatus.NOT_FOUND}
+
+
+def _by_date(record: dict[str, Any]) -> str:
+    """Return the ISO 8601 date of a daily record, to sort records by date."""
+    return record.get("date") or ""
 
 
 class AccessLink:
     """Wrapper class for Polar Open AccessLink API v3."""
 
-    def __init__(self):
+    def __init__(self, session: ClientSession) -> None:
         """Init an Accesslink access."""
-        self.oauth = OAuth2Client(url=ACCESSLINK_URL)
+        self.oauth = OAuth2Client(session, url=ACCESSLINK_URL)
         self.users = Users(oauth=self.oauth)
         self.daily_activity = DailyActivity(oauth=self.oauth)
 
-    def close(self):
-        """Close the underlying HTTP connections."""
-        self.oauth.close()
-
-    def get_exercises(self, access_token):
-        """Get last exercises."""
-        exercises = self.oauth.get(endpoint="/exercises", access_token=access_token)
+    async def get_exercises(self, access_token: str) -> list[dict[str, Any]]:
+        """Get the exercises of the last 30 days, most recent first."""
+        exercises = await self.oauth.get(
+            endpoint="/exercises", access_token=access_token
+        )
         for exercise in exercises:
             if "duration" in exercise:
                 exercise["duration"] = format_duration(exercise["duration"])
+        # Exercises without a valid start time are listed last
+        oldest = datetime.min.replace(tzinfo=UTC)
         return sorted(
             exercises,
-            key=lambda t: datetime.strptime(t["start_time"], "%Y-%m-%dT%H:%M:%S"),
+            key=lambda exercise: exercise_start_utc(exercise) or oldest,
             reverse=True,
         )
 
-    def get_sleep(self, access_token):
+    async def get_sleep(self, access_token: str) -> list[dict[str, Any]]:
         """Get last sleeps."""
-        sleepdata = self.oauth.get(endpoint="/users/sleep/", access_token=access_token)[
-            "nights"
-        ]
-        return sorted(
-            sleepdata,
-            key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
-            reverse=True,
+        sleepdata = await self.oauth.get(
+            endpoint="/users/sleep/", access_token=access_token
         )
+        return sorted(sleepdata["nights"], key=_by_date, reverse=True)
 
-    def get_recharge(self, access_token):
+    async def get_recharge(self, access_token: str) -> list[dict[str, Any]]:
         """Get last nightly recharges."""
-        rechargedata = self.oauth.get(
+        rechargedata = await self.oauth.get(
             endpoint="/users/nightly-recharge/", access_token=access_token
-        )["recharges"]
-        return sorted(
-            rechargedata,
-            key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
-            reverse=True,
         )
+        return sorted(rechargedata["recharges"], key=_by_date, reverse=True)
 
-    def get_cardio_load(self, access_token):
+    async def get_cardio_load(self, access_token: str) -> list[dict[str, Any]]:
         """Get cardio loads of the last 28 days, most recent first.
 
         Days without a computed value are dropped. Returns an empty list when
         the data is not available (unsupported device or missing consents).
         """
         try:
-            cardioloads = self.oauth.get(
+            cardioloads = await self.oauth.get(
                 endpoint="/users/cardio-load", access_token=access_token
             )
-        except HTTPError as err:
-            _LOGGER.debug("Unable to get cardio load: %s", err)
+        except ClientResponseError as err:
+            if err.status not in UNAVAILABLE_STATUSES:
+                raise
+            _LOGGER.debug("Cardio load not available: %s", err)
             return []
         return sorted(
             (
@@ -88,37 +114,45 @@ class AccessLink:
                 for cardioload in cardioloads or []
                 if cardioload.get("cardio_load_status") != "LOAD_STATUS_NOT_AVAILABLE"
             ),
-            key=lambda t: datetime.strptime(t["date"], "%Y-%m-%d"),
+            key=_by_date,
             reverse=True,
         )
 
-    def get_continuous_heart_rate(self, access_token, day):
+    async def get_continuous_heart_rate(
+        self, access_token: str, day: str
+    ) -> list[dict[str, Any]]:
         """Get continuous heart rate samples of a day (ISO-8601 date).
 
         Returns an empty list when there is no data for that day or when the
         data is not available (unsupported device or missing consents).
         """
         try:
-            heartrate = self.oauth.get(
+            heartrate = await self.oauth.get(
                 endpoint=f"/users/continuous-heart-rate/{day}",
                 access_token=access_token,
             )
-        except HTTPError as err:
-            _LOGGER.debug("Unable to get continuous heart rate for %s: %s", day, err)
+        except ClientResponseError as err:
+            if err.status not in UNAVAILABLE_STATUSES:
+                raise
+            _LOGGER.debug("Continuous heart rate not available for %s: %s", day, err)
             return []
         return heartrate.get("heart_rate_samples") or []
 
-    def get_userdata(self, user_id, access_token):
+    async def get_userdata(self, user_id: int, access_token: str) -> dict[str, Any]:
         """Get user data."""
-        return self.users.get_information(user_id, access_token)
+        return await self.users.get_information(user_id, access_token)
 
-    def get_daily_activities(self, user_id, access_token):
+    async def get_daily_activities(
+        self, user_id: int, access_token: str
+    ) -> list[dict[str, Any]]:
         """Get the daily activity summaries synced since the last call.
 
         Polar only returns the summaries that were not committed yet, and may
-        return several summaries for the same day (one per sync).
+        return several summaries for the same day (one per sync). The summaries
+        read are returned even when the commit fails: Polar may have received
+        it, and otherwise returns them again in the next transaction.
         """
-        transaction = self.daily_activity.create_transaction(
+        transaction = await self.daily_activity.create_transaction(
             user_id=user_id, access_token=access_token
         )
         if not transaction:
@@ -126,9 +160,12 @@ class AccessLink:
             return []
 
         activities = [
-            transaction.get_activity_summary(url)
-            for url in transaction.list_activities()["activity-log"]
+            await transaction.get_activity_summary(url)
+            for url in (await transaction.list_activities())["activity-log"]
         ]
-        transaction.commit()
+        try:
+            await transaction.commit()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.warning("Unable to commit the daily activity transaction: %s", err)
         _LOGGER.debug("Got %s new daily activities", len(activities))
         return activities

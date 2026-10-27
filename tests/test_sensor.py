@@ -1,18 +1,33 @@
 """Tests for the Polar sensors."""
 
 from datetime import timedelta
+from unittest.mock import MagicMock
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    snapshot_platform,
+)
 from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
+from syrupy.assertion import SnapshotAssertion
 
 from homeassistant.components.recorder.history import get_significant_states
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
+
+
+async def test_entities(
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    snapshot: SnapshotAssertion,
+    init_integration: MockConfigEntry,
+) -> None:
+    """Test the entities, their names, icons and states."""
+    await snapshot_platform(hass, entity_registry, snapshot, init_integration.entry_id)
 
 
 @pytest.mark.parametrize(
@@ -93,8 +108,9 @@ async def test_exercises_not_recorded(
     assert "exercises" not in states["sensor.john_doe_exercises"][0].attributes
 
 
+@pytest.mark.usefixtures("setup_credentials")
 async def test_sensor_unavailable_without_data(
-    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink
+    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
 ) -> None:
     """Test sensors are unavailable when Polar has no data."""
     mock_accesslink.get_exercises.return_value = []

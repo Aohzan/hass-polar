@@ -2,16 +2,16 @@
 
 from collections.abc import Generator
 from http import HTTPStatus
-from unittest.mock import MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from aiohttp import ClientConnectionError, encode_basic_auth
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMocker,
 )
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
-from requests import Response
-from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
 
 from custom_components.polar.const import CONF_USER_ID, DOMAIN
 from custom_components.polar.polaraccesslink.accesslink import (
@@ -29,16 +29,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers import config_entry_oauth2_flow
 
-from .conftest import ACCESS_TOKEN, CLIENT_ID, USER_DATA, USER_ID
+from .conftest import (
+    ACCESS_TOKEN,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    USER_DATA,
+    USER_ID,
+    http_error,
+)
 
 REDIRECT_URL = "https://example.com/auth/external/callback"
-
-
-def _http_error(status: int) -> HTTPError:
-    """Return a requests HTTP error with the given status."""
-    response = Response()
-    response.status_code = status
-    return HTTPError(str(status), response=response)
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def mock_flow_accesslink() -> Generator[MagicMock]:
         "custom_components.polar.config_flow.AccessLink", autospec=True
     ) as mock_class:
         accesslink = mock_class.return_value
-        accesslink.users = MagicMock()
+        accesslink.users = MagicMock(register=AsyncMock())
         accesslink.get_userdata.return_value = dict(USER_DATA)
         yield accesslink
 
@@ -119,8 +119,9 @@ async def test_full_flow(
     assert result["options"] == {CONF_SCAN_INTERVAL: 30}
 
     # Polar expects the client credentials in a Basic Authorization header
-    _, _, token_data, _ = aioclient_mock.mock_calls[0]
+    _, _, token_data, headers = aioclient_mock.mock_calls[0]
     assert "client_secret" not in token_data
+    assert headers["Authorization"] == encode_basic_auth(CLIENT_ID, CLIENT_SECRET)
     mock_flow_accesslink.users.register.assert_called_once_with(ACCESS_TOKEN)
 
 
@@ -133,7 +134,7 @@ async def test_flow_user_already_registered(
     mock_setup_entry: None,
 ) -> None:
     """Test a user already registered to the client is accepted."""
-    mock_flow_accesslink.users.register.side_effect = _http_error(HTTPStatus.CONFLICT)
+    mock_flow_accesslink.users.register.side_effect = http_error(HTTPStatus.CONFLICT)
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
@@ -148,7 +149,11 @@ async def test_flow_user_already_registered(
 
 @pytest.mark.parametrize(
     "side_effect",
-    [_http_error(HTTPStatus.INTERNAL_SERVER_ERROR), RequestsConnectionError()],
+    [
+        http_error(HTTPStatus.INTERNAL_SERVER_ERROR),
+        ClientConnectionError(),
+        TimeoutError(),
+    ],
 )
 @pytest.mark.usefixtures("current_request_with_host", "setup_credentials")
 async def test_flow_cannot_connect(
@@ -173,13 +178,25 @@ async def test_flow_cannot_connect(
     assert result["reason"] == "cannot_connect"
 
 
+@pytest.mark.parametrize(
+    ("mock_kwargs", "reason"),
+    [
+        ({"status": HTTPStatus.UNAUTHORIZED}, "oauth_unauthorized"),
+        ({"status": HTTPStatus.TOO_MANY_REQUESTS}, "oauth_failed"),
+        ({"status": HTTPStatus.SERVICE_UNAVAILABLE}, "oauth_failed"),
+        ({"text": "<html>maintenance</html>"}, "oauth_failed"),
+        ({"exc": ClientConnectionError()}, "oauth_failed"),
+    ],
+)
 @pytest.mark.usefixtures("current_request_with_host", "setup_credentials")
-async def test_flow_invalid_client(
+async def test_flow_token_request_failure(
     hass: HomeAssistant,
     hass_client_no_auth: ClientSessionGenerator,
     aioclient_mock: AiohttpClientMocker,
+    mock_kwargs: dict[str, Any],
+    reason: str,
 ) -> None:
-    """Test the flow aborts when Polar rejects the client credentials."""
+    """Test the flow aborts when the token request fails."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
     )
@@ -187,12 +204,12 @@ async def test_flow_invalid_client(
         hass, hass_client_no_auth, aioclient_mock, result["flow_id"], result["url"]
     )
     aioclient_mock.clear_requests()
-    aioclient_mock.post(ACCESS_TOKEN_URL, status=HTTPStatus.UNAUTHORIZED)
+    aioclient_mock.post(ACCESS_TOKEN_URL, **mock_kwargs)
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"])
 
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "oauth_unauthorized"
+    assert result["reason"] == reason
 
 
 @pytest.mark.usefixtures("current_request_with_host", "setup_credentials")

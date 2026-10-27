@@ -1,15 +1,19 @@
 """Tests for the Polar integration setup."""
 
+from datetime import timedelta
 from http import HTTPStatus
 import json
-import os
+from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from aiohttp import ClientConnectionError
+from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from requests import Response
-from requests.exceptions import ConnectionError as RequestsConnectionError, HTTPError
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from custom_components.polar.const import CONF_USER_ID, DOMAIN
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
@@ -22,15 +26,18 @@ from homeassistant.const import (
     CONF_TOKEN,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.config_entry_oauth2_flow import (
+    ImplementationUnavailableError,
+)
 
-from .conftest import ACCESS_TOKEN, CLIENT_ID, CLIENT_SECRET, DAILY_ACTIVITIES, USER_ID
-
-
-def _http_error(status: int) -> HTTPError:
-    """Return a requests HTTP error with the given status."""
-    response = Response()
-    response.status_code = status
-    return HTTPError(str(status), response=response)
+from .conftest import (
+    ACCESS_TOKEN,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    DAILY_ACTIVITIES,
+    USER_ID,
+    http_error,
+)
 
 
 async def test_setup_and_unload(
@@ -43,17 +50,19 @@ async def test_setup_and_unload(
     await hass.async_block_till_done()
 
     assert init_integration.state is ConfigEntryState.NOT_LOADED
-    mock_accesslink.close.assert_called_once()
 
 
 @pytest.mark.parametrize(
     ("side_effect", "state"),
     [
-        (_http_error(HTTPStatus.UNAUTHORIZED), ConfigEntryState.SETUP_ERROR),
-        (_http_error(HTTPStatus.INTERNAL_SERVER_ERROR), ConfigEntryState.SETUP_RETRY),
-        (RequestsConnectionError(), ConfigEntryState.SETUP_RETRY),
+        (http_error(HTTPStatus.UNAUTHORIZED), ConfigEntryState.SETUP_ERROR),
+        (http_error(HTTPStatus.INTERNAL_SERVER_ERROR), ConfigEntryState.SETUP_RETRY),
+        (http_error(HTTPStatus.TOO_MANY_REQUESTS), ConfigEntryState.SETUP_RETRY),
+        (ClientConnectionError(), ConfigEntryState.SETUP_RETRY),
+        (TimeoutError(), ConfigEntryState.SETUP_RETRY),
     ],
 )
+@pytest.mark.usefixtures("setup_credentials")
 async def test_setup_failure(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
@@ -132,9 +141,9 @@ async def test_migrate_from_version_1(
     ]
 
     def write_legacy_file() -> None:
-        os.makedirs(os.path.dirname(legacy_path), exist_ok=True)
-        with open(legacy_path, "w", encoding="utf-8") as legacy_file:
-            json.dump(legacy_activities, legacy_file)
+        path = Path(legacy_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(legacy_activities), encoding="utf-8")
 
     await hass.async_add_executor_job(write_legacy_file)
     mock_accesslink.get_daily_activities.return_value = []
@@ -159,6 +168,75 @@ async def test_migrate_from_version_1(
     mock_accesslink.get_exercises.assert_called_with(ACCESS_TOKEN)
 
     # The legacy backup is moved to the store
-    assert not await hass.async_add_executor_job(os.path.exists, legacy_path)
+    assert not await hass.async_add_executor_job(Path(legacy_path).exists)
     state = hass.states.get("sensor.john_doe_daily_activity_steps")
     assert state.state == "15000"
+
+
+async def test_setup_without_credentials(
+    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
+) -> None:
+    """Test the account must be linked again when its credentials are removed."""
+    config_entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.SETUP_ERROR
+    assert [
+        flow["context"]["source"] for flow in hass.config_entries.flow.async_progress()
+    ] == [SOURCE_REAUTH]
+    mock_accesslink.get_userdata.assert_not_called()
+
+
+@pytest.mark.usefixtures("setup_credentials")
+async def test_setup_implementation_unavailable(
+    hass: HomeAssistant, config_entry: MockConfigEntry, mock_accesslink: MagicMock
+) -> None:
+    """Test the setup is retried when the OAuth2 implementation is unavailable."""
+    config_entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.polar.async_get_config_entry_implementation",
+        side_effect=ImplementationUnavailableError,
+    ):
+        await hass.config_entries.async_setup(config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert not hass.config_entries.flow.async_progress()
+    mock_accesslink.get_userdata.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("headers", "next_update"),
+    [({"Retry-After": "3600"}, timedelta(hours=1)), ({}, timedelta(minutes=30))],
+)
+async def test_rate_limited(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    init_integration: MockConfigEntry,
+    mock_accesslink: MagicMock,
+    headers: dict[str, str],
+    next_update: timedelta,
+) -> None:
+    """Test the next update waits for the delay asked by Polar."""
+    coordinator = init_integration.runtime_data
+    mock_accesslink.get_userdata.side_effect = http_error(
+        HTTPStatus.TOO_MANY_REQUESTS, headers
+    )
+    freezer.tick(timedelta(minutes=30))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert not coordinator.last_update_success
+
+    mock_accesslink.get_userdata.side_effect = None
+    freezer.tick(next_update - timedelta(minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert not coordinator.last_update_success
+
+    freezer.tick(timedelta(minutes=1))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert coordinator.last_update_success

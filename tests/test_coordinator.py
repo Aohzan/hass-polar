@@ -19,6 +19,13 @@ def test_merge_daily_activities_keeps_latest_summary() -> None:
     assert merge_daily_activities(stored, new) == [new[0], stored[0]]
 
 
+def test_merge_daily_activities_without_date() -> None:
+    """Test the summaries without a date are dropped."""
+    new = [{"created": "2026-10-05T20:00:00.000Z"}, {"date": "2026-10-05"}]
+
+    assert merge_daily_activities([], new) == [new[1]]
+
+
 def test_merge_daily_activities_limits_history() -> None:
     """Test only the last 28 days are kept."""
     activities = [{"date": f"2026-09-{day:02}"} for day in range(1, 31)]

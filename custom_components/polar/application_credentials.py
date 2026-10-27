@@ -1,11 +1,10 @@
 """Application credentials platform for the Polar integration."""
 
-from __future__ import annotations
-
+from http import HTTPStatus
 import logging
 from typing import Any, cast
 
-from aiohttp import BasicAuth, ClientError
+from aiohttp import ClientError, ClientResponseError, encode_basic_auth
 
 from homeassistant.components.application_credentials import (
     AuthImplementation,
@@ -13,6 +12,11 @@ from homeassistant.components.application_credentials import (
     ClientCredential,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import (
+    OAuth2TokenRequestConnectionError,
+    OAuth2TokenRequestReauthError,
+    OAuth2TokenRequestTransientError,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.config_entry_oauth2_flow import (
     AbstractOAuth2Implementation,
@@ -35,22 +39,51 @@ class PolarOAuth2Implementation(AuthImplementation):
     """
 
     async def _token_request(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Make a token request."""
+        """Make a token request, raising the Home Assistant OAuth2 errors."""
         session = async_get_clientsession(self.hass)
-        resp = await session.post(
-            self.token_url,
-            data=data,
-            auth=BasicAuth(self.client_id, self.client_secret),
-            headers={"Accept": "application/json;charset=UTF-8"},
-        )
-        if resp.status >= 400:
-            try:
-                body = await resp.text()
-            except ClientError:
-                body = ""
-            _LOGGER.error("Polar token request failed (%s): %s", resp.status, body)
-        resp.raise_for_status()
-        return cast(dict[str, Any], await resp.json())
+        try:
+            resp = await session.post(
+                self.token_url,
+                data=data,
+                headers={
+                    "Accept": "application/json;charset=UTF-8",
+                    "Authorization": encode_basic_auth(
+                        self.client_id, self.client_secret
+                    ),
+                },
+            )
+            if resp.status >= 400:
+                try:
+                    body = await resp.text()
+                except ClientError:
+                    body = ""
+                _LOGGER.error("Polar token request failed (%s): %s", resp.status, body)
+            resp.raise_for_status()
+        except ClientResponseError as err:
+            kwargs: dict[str, Any] = {
+                "request_info": err.request_info,
+                "history": err.history,
+                "status": err.status,
+                "message": err.message,
+                "headers": err.headers,
+                "domain": self.service_domain,
+            }
+            if (
+                err.status == HTTPStatus.TOO_MANY_REQUESTS
+                or err.status >= HTTPStatus.INTERNAL_SERVER_ERROR
+            ):
+                raise OAuth2TokenRequestTransientError(**kwargs) from err
+            # Rejected request: invalid client credentials, code or token
+            raise OAuth2TokenRequestReauthError(**kwargs) from err
+        except ClientError as err:
+            raise OAuth2TokenRequestConnectionError(domain=self.service_domain) from err
+
+        try:
+            return cast(dict[str, Any], await resp.json())
+        except (ClientError, ValueError) as err:
+            # Accepted request with an unusable response: not an auth failure
+            _LOGGER.warning("Invalid Polar token response: %s", err)
+            raise OAuth2TokenRequestConnectionError(domain=self.service_domain) from err
 
 
 async def async_get_auth_implementation(
