@@ -18,9 +18,16 @@ TO_REDACT = {
     # User information
     "birthdate",
     "first-name",
+    "gender",
+    "height",
     "last-name",
     "member-id",
     "polar-user-id",
+    "registration-date",
+    "weight",
+    # URL of the user, containing the user ID
+    "polar-user",
+    "polar_user",
 }
 
 
