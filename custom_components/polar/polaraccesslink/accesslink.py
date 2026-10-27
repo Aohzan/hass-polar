@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta, timezone
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError, ClientSession
+from aiohttp import ClientError, ClientResponseError, ClientSession
 import isodate
 
 from homeassistant.util import dt as dt_util
@@ -138,7 +138,9 @@ class AccessLink:
         """Get the daily activity summaries synced since the last call.
 
         Polar only returns the summaries that were not committed yet, and may
-        return several summaries for the same day (one per sync).
+        return several summaries for the same day (one per sync). The summaries
+        read are returned even when the commit fails: Polar may have received
+        it, and otherwise returns them again in the next transaction.
         """
         transaction = await self.daily_activity.create_transaction(
             user_id=user_id, access_token=access_token
@@ -151,6 +153,9 @@ class AccessLink:
             await transaction.get_activity_summary(url)
             for url in (await transaction.list_activities())["activity-log"]
         ]
-        await transaction.commit()
+        try:
+            await transaction.commit()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.warning("Unable to commit the daily activity transaction: %s", err)
         _LOGGER.debug("Got %s new daily activities", len(activities))
         return activities

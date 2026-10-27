@@ -62,12 +62,16 @@ def daily_store(hass: HomeAssistant, entry_id: str) -> Store[list[dict[str, Any]
 def merge_daily_activities(
     stored: list[dict[str, Any]], new: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    """Keep the most recent summary of each day, most recent day first."""
+    """Keep the most recent summary of each day, most recent day first.
+
+    Summaries without a date are dropped, as they can't be tied to a day.
+    """
     by_date: dict[str, dict[str, Any]] = {}
     for activity in sorted(
         chain(stored, new), key=lambda activity: activity.get("created") or ""
     ):
-        by_date[activity["date"]] = activity
+        if day := activity.get("date"):
+            by_date[day] = activity
     return [by_date[day] for day in sorted(by_date, reverse=True)][:DAILY_HISTORY_DAYS]
 
 
