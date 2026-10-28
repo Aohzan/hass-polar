@@ -58,6 +58,7 @@ EXERCISE_ATTRIBUTES = [
     "heart_rate",
     "training_load",
     "sport",
+    "detailed_sport_info",
     "calories",
     "running_index",
     "device",

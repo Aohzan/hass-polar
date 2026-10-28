@@ -86,6 +86,7 @@ async def test_exercises(
             "duration": "1:00:00",
             "heart_rate": {"average": 140, "maximum": 175},
             "sport": "RUNNING",
+            "detailed_sport_info": "RUNNING",
         }
     ]
 
