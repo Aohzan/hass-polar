@@ -51,6 +51,7 @@ EXERCISES = [
         "duration": "1:00:00",
         "heart_rate": {"average": 140, "maximum": 175},
         "sport": "RUNNING",
+        "detailed_sport_info": "RUNNING",
         "upload_time": "2026-10-05T19:30:00.000Z",
         "polar_user": USER_URL,
     }

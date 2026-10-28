@@ -74,6 +74,8 @@ Each item of the `exercises` attribute has the same values as the `Last exercise
 {{ (ns.distance / 1000) | round(1) }}
 ```
 
+Polar reports many indoor sessions (yoga, strength training, stretching…) with the generic `sport` `OTHER`: the sport selected on the device is in `detailed_sport_info` (for instance `YOGA`), when Polar provides it.
+
 Cardio load and continuous heart rate depend on the device and on the consents given in Polar Flow: when they are not available, their data is simply missing.
 
 ## History
