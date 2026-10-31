@@ -1,6 +1,9 @@
 {
   "domain": "polar",
   "name": "Polar",
+  "categories": [
+    "health_wellbeing"
+  ],
   "codeowners": [
     "@Aohzan"
   ],
