@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0](https://github.com/Aohzan/hass-polar/compare/2.1.0...2.2.0) (2026-10-27)
+
+### Features
+
+* modernize the integration for Home Assistant 2026.10 ([cca1101](https://github.com/Aohzan/hass-polar/commit/cca11011cd0399f9164aaedb649cbbd6d64fc8fe))
+* ship the brand images with the integration ([d6dc1a3](https://github.com/Aohzan/hass-polar/commit/d6dc1a3f11a375e4114d932ec282a868752b473d))
+
+### Bug Fixes
+
+* keep the daily activities read when the transaction commit fails ([791f31f](https://github.com/Aohzan/hass-polar/commit/791f31f6757b64c8c5bbf5e754a9dde9ce8994de))
+* only ask to link the account again when Polar rejects the token request ([2edb709](https://github.com/Aohzan/hass-polar/commit/2edb7095e7a119d95c5242ad9bb2fe87f87c0132))
+* redact the body measurements and user URLs from the diagnostics ([56a12f4](https://github.com/Aohzan/hass-polar/commit/56a12f41341be231429a731101abdf8cd2365db4))
+* report rejected client credentials when linking the account ([189a7dd](https://github.com/Aohzan/hass-polar/commit/189a7dd941dcd96596ee10d1d6738a210cab0022))
+* retry the heart rate and cardio load requests that failed ([647de73](https://github.com/Aohzan/hass-polar/commit/647de7321b31372eb5b19e0df1e20d2e07ba2f49))
+
 ## [2.1.0](https://github.com/Aohzan/hass-polar/compare/2.0.1...2.1.0) (2026-10-13)
 
 ### Features
