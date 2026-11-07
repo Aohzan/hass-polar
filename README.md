@@ -10,9 +10,11 @@ You need to create a client in [Polar AccessLink](https://admin.polaraccesslink.
 
 ## Installation
 
-### HACS
+### Marketplace
 
-HACS > Integrations > Explore & Add Repositories > Polar > Install this repository
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=Aohzan&repository=hass-polar&category=integration)
+
+Settings > Marketplace > search for "Polar" > Install.
 
 ### Manually
 
@@ -20,7 +22,9 @@ Copy the `custom_components/polar` folder into the config folder.
 
 ## Configuration
 
-To add the Polar integration to your installation, go to Settings > Devices & services, click the button with + sign and from the list of integrations select Polar.
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=polar)
+
+Or go to Settings > Devices & services > Add integration and select Polar.
 
 Enter the `Client ID` and `Client secret` of your Polar AccessLink client when asked for application credentials, then log in to Polar to link your account. The credentials can be managed later in Settings > Devices & services > ⋮ > Application credentials.
 
