@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from aiohttp import ClientConnectionError
 from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import (
+from pytest_homeassistant.common import (
     MockConfigEntry,
     async_fire_time_changed,
 )

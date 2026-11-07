@@ -8,9 +8,7 @@ from unittest.mock import MagicMock, patch
 from aiohttp import ClientResponseError
 from multidict import CIMultiDict
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.syrupy import HomeAssistantSnapshotExtension
-from syrupy.assertion import SnapshotAssertion
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.polar.const import CONF_USER_ID, DOMAIN
 from homeassistant.components.application_credentials import (
@@ -108,14 +106,8 @@ def http_error(
     )
 
 
-@pytest.fixture
-def snapshot(snapshot: SnapshotAssertion) -> SnapshotAssertion:
-    """Return the snapshot assertion with the Home Assistant serializer."""
-    return snapshot.use_extension(HomeAssistantSnapshotExtension)
-
-
 @pytest.fixture(autouse=True)
-def auto_enable(recorder_mock: Any, enable_custom_integrations: None) -> None:
+def auto_enable(recorder_mock: Any) -> None:
     """Enable the recorder and the custom integrations."""
 
 
