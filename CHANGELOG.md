@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.0](https://github.com/Aohzan/hass-polar/compare/2.2.0...2.3.0) (2026-11-07)
+
+### Features
+
+* require Home Assistant 2026.11 ([557c339](https://github.com/Aohzan/hass-polar/commit/557c339226de1a34923a1074d8406e77da181464))
+
 ## [2.2.0](https://github.com/Aohzan/hass-polar/compare/2.1.0...2.2.0) (2026-10-27)
 
 ### Features
