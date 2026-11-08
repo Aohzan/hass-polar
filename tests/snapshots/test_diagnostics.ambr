@@ -22,6 +22,7 @@
       ]),
       'exercisedata': list([
         dict({
+          'detailed_sport_info': 'RUNNING',
           'duration': '1:00:00',
           'heart_rate': dict({
             'average': 140,
@@ -37,6 +38,7 @@
       'historydata': dict({
         'exercises': list([
           dict({
+            'detailed_sport_info': 'RUNNING',
             'duration': '1:00:00',
             'heart_rate': dict({
               'average': 140,
@@ -65,6 +67,7 @@
         'polar-user': '**REDACTED**',
       }),
       'last_exercise': dict({
+        'detailed_sport_info': 'RUNNING',
         'duration': '1:00:00',
         'heart_rate': dict({
           'average': 140,
