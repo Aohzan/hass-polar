@@ -399,6 +399,7 @@
       <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Polar',
       'exercises': list([
         dict({
+          'detailed_sport_info': 'RUNNING',
           'duration': '1:00:00',
           'heart_rate': dict({
             'average': 140,
@@ -515,6 +516,7 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       <EntityStateAttribute.ATTRIBUTION: 'attribution'>: 'Data provided by Polar',
+      'detailed_sport_info': 'RUNNING',
       <EntityStateAttribute.DEVICE_CLASS: 'device_class'>: 'timestamp',
       'duration': '1:00:00',
       <EntityStateAttribute.FRIENDLY_NAME: 'friendly_name'>: 'John Doe Last exercise',
