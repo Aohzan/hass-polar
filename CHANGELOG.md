@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.0](https://github.com/Aohzan/hass-polar/compare/2.3.0...2.4.0) (2026-11-22)
+
+### Features
+
+* expose the detailed sport of the exercises ([#24](https://github.com/Aohzan/hass-polar/issues/24)) ([14c7f1b](https://github.com/Aohzan/hass-polar/commit/14c7f1b77ec6f6487848343fa80f20d26d8d406c)), closes [#23](https://github.com/Aohzan/hass-polar/issues/23)
+
 ## [2.3.0](https://github.com/Aohzan/hass-polar/compare/2.2.0...2.3.0) (2026-11-07)
 
 ### Features
